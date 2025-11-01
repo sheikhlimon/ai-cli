@@ -112,9 +112,8 @@ def select_option(options: List[Tuple[str, str]], title: str = "Select an option
         show_cursor()
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-@app.command()
 def tools():
-    """Launch interactive AI tool selector"""
+    """Launch interactive AI tool selector (internal function)"""
     import subprocess
     
     manager = AIModelManager()
@@ -193,8 +192,8 @@ def _run_cli_tool(tool_name: str):
     except Exception as e:
         typer.echo(f"❌ Error running {tool_name}: {str(e)}")
 
-@app.command()
 def config(
+    ctx: typer.Context,
     set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set API key (provider=key)"),
     add_tool: Optional[str] = typer.Option(None, "--add", "-a", help="Add custom tool"),
     remove_tool: Optional[str] = typer.Option(None, "--remove", "-r", help="Remove custom tool"),
@@ -202,7 +201,7 @@ def config(
     list_tools: bool = typer.Option(False, "--tools", "-t", help="Show custom tools"),
     reset: bool = typer.Option(False, "--reset", help="Reset all")
 ):
-    """Manage configuration"""
+    """Configuration options"""
     config_manager = ConfigManager()
     
     if reset:
@@ -282,15 +281,26 @@ def config(
                 typer.echo(f"    Preview: {info['key_preview']}")
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context):
+def main(
+    ctx: typer.Context,
+    set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set API key (provider=key)"),
+    add_tool: Optional[str] = typer.Option(None, "--add", "-a", help="Add custom tool"),
+    remove_tool: Optional[str] = typer.Option(None, "--remove", "-r", help="Remove custom tool"),
+    list_status: bool = typer.Option(False, "--list", "-l", help="Show configuration"),
+    list_tools: bool = typer.Option(False, "--tools", "-t", help="Show custom tools"),
+    reset: bool = typer.Option(False, "--reset", help="Reset all")
+):
     """
-    Main callback - runs 'tools' command by default.
+    Unified interface for AI models and CLI tools.
     
-    When user runs 'ai-cli' without arguments, this launches the
-    interactive tool selector automatically.
+    Run without options to launch interactive tool selector.
     """
-    if ctx.invoked_subcommand is None:
-        ctx.invoke(tools)
+    # Handle config options if provided
+    if any([set_key, add_tool, remove_tool, list_status, list_tools, reset]):
+        config(ctx, set_key, add_tool, remove_tool, list_status, list_tools, reset)
+    elif ctx.invoked_subcommand is None:
+        # Launch tool selector by default
+        tools()
 
 if __name__ == "__main__":
     app()

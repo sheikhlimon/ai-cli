@@ -13,21 +13,22 @@ def test_basic_cli_workflow():
     assert result.exit_code == 0
     assert "Unified interface for AI models and CLI tools" in result.stdout
     
-    # Test config command
-    result = runner.invoke(app, ["config", "--list"])
+    # Test list command
+    result = runner.invoke(app, ["--list"])
     assert result.exit_code == 0
     
-    # Test tools command help
-    result = runner.invoke(app, ["tools", "--help"])
+    # Test that options are frontlined
+    result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Launch interactive AI tool selector" in result.stdout
+    assert "--set" in result.stdout
+    assert "--add" in result.stdout
 
 
 @pytest.mark.integration
 def test_config_workflow():
     """Test configuration management workflow"""
     # Test listing configuration
-    result = runner.invoke(app, ["config", "--list"])
+    result = runner.invoke(app, ["--list"])
     assert result.exit_code == 0
     
     # Should show configuration keys

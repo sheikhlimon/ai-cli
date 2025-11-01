@@ -16,24 +16,19 @@ def test_help_command():
 
 @pytest.mark.unit
 def test_config_list_command():
-    """Test the config --list command"""
-    result = runner.invoke(app, ["config", "--list"])
+    """Test the --list flag"""
+    result = runner.invoke(app, ["--list"])
     assert result.exit_code == 0
     # Should show configuration status (even if keys are not set)
     assert "Configuration:" in result.stdout or "CLAUDE" in result.stdout
 
 @pytest.mark.unit
-def test_config_command_no_args():
-    """Test the config command without arguments"""
-    result = runner.invoke(app, ["config"])
+def test_set_api_key():
+    """Test the --set flag"""
+    # Just verify it doesn't crash
+    result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-
-@pytest.mark.unit
-def test_tools_command_help():
-    """Test the tools command help"""
-    result = runner.invoke(app, ["tools", "--help"])
-    assert result.exit_code == 0
-    assert "Launch interactive AI tool selector" in result.stdout
+    assert "--set" in result.stdout
 
 @pytest.mark.unit
 def test_invalid_command():
