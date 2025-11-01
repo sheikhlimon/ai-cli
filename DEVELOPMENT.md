@@ -29,8 +29,8 @@ You have two options:
 ### Option 1: Direct execution (easiest)
 ```bash
 # From project directory
-venv/bin/ai-cli tools
-venv/bin/ai-cli config --list
+venv/bin/ai-cli           # Launch tool selector
+venv/bin/ai-cli config -l # Show config
 ```
 
 ### Option 2: Activate venv first
@@ -41,8 +41,8 @@ source venv/bin/activate   # Linux/Mac
 venv\Scripts\activate      # Windows
 
 # Now you can use ai-cli directly
-ai-cli tools
-ai-cli config --list
+ai-cli              # Launch tool selector
+ai-cli config -l    # Show config
 
 # When done, deactivate
 deactivate
@@ -52,7 +52,7 @@ deactivate
 
 ```bash
 # After making code changes, just run:
-venv/bin/ai-cli tools
+venv/bin/ai-cli
 
 # No need to reinstall because we used -e (editable mode)
 ```

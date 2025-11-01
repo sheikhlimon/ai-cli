@@ -1,26 +1,25 @@
 # AI CLI
 
-Multi-model AI manager with interactive TUI selector.
+Unified interface for AI models and CLI tools with interactive selection.
 
 ## Features
 
-- Interactive TUI with arrow keys/vim motions (j/k)
-- Unified interface for cloud models (Qwen, Claude, Gemini)
-- Auto-detects local Ollama models
-- Dynamic CLI tool discovery (detects installed AI tools like droid, gemini, claude, amp, etc.)
-- Persistent API key configuration
-- Custom CLI tool management
+- **Just run `ai-cli`** - Interactive tool selector launches automatically
+- Auto-detects AI tools (droid, gemini, claude, amp, ollama, etc.)
+- Supports cloud models (Qwen, Claude, Gemini) and local Ollama models
+- Simple config with short flags: `-s` (set), `-a` (add), `-l` (list)
+- Arrow keys or vim motions (j/k) for navigation
 
 ## Installation
 
 ### For Users (Simple)
 
 ```bash
-# Install with pipx (recommended - works everywhere)
-pipx install git+https://github.com/yourusername/ai-cli.git
+# Install with pipx (recommended)
+pipx install git+https://github.com/sheikhlimon/ai-cli.git
 
-# Use it
-ai-cli tools
+# Use it - that's it!
+ai-cli
 ```
 
 ### For Developers
@@ -33,7 +32,7 @@ python3 -m venv venv
 venv/bin/pip install -e .
 
 # Run it
-venv/bin/ai-cli tools
+venv/bin/ai-cli
 ```
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
@@ -41,21 +40,20 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
 ## Quick Start
 
 ```bash
-# Launch interactive selector
-ai-cli tools
+# Launch interactive selector (or just: ai-cli)
+ai-cli
 
 # Configure API keys
 ai-cli config -s claude=sk-...
 ai-cli config -s gemini=...
 ai-cli config -s qwen=...
 
-# Manage custom tools
-ai-cli config -a my-tool      # Add
-ai-cli config -r my-tool      # Remove
-ai-cli config -t              # List tools
+# Add custom AI tools (if not auto-detected)
+ai-cli config -a my-tool
 
-# View config
-ai-cli config -l
+# View everything
+ai-cli config -l              # Show API keys
+ai-cli config -t              # Show custom tools
 ```
 
 ## Configuration
