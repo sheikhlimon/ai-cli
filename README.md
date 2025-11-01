@@ -58,7 +58,7 @@ python3 -m venv venv
 venv/bin/pip install -e .
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Requirements
 

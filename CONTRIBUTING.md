@@ -1,4 +1,4 @@
-# Development Guide
+# Contributing Guide
 
 ## What is venv?
 
