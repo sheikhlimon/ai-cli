@@ -120,67 +120,78 @@ def tools():
     manager = AIModelManager()
     resources = manager.get_available_resources()
     
+    # Build options list
     options = []
-    
-    # Add models
     for model in resources["models"]:
-        if model.startswith("ollama:"):
-            display = f"{model[7:]} (Ollama)"
-        else:
-            display = f"{model} (Cloud)"
-        options.append((display, f"model:{model}"))
+        label = f"{model[7:]} (Ollama)" if model.startswith("ollama:") else f"{model} (Cloud)"
+        options.append((label, f"model:{model}"))
     
-    # Add CLI tools
     for tool in resources["cli_tools"]:
         options.append((f"{tool} (CLI)", f"tool:{tool}"))
     
+    # Check if any tools available
     if not options:
-        typer.echo("No AI models or CLI tools available.")
-        typer.echo("  - Cloud: Set API keys (ai-cli config)")
-        typer.echo("  - Local: Install Ollama with models")
+        typer.echo("No AI tools found!\n")
+        typer.echo("Setup:")
+        typer.echo("  • Cloud models: ai-cli config -s provider=key")
+        typer.echo("  • Local models: Install Ollama (https://ollama.ai)")
+        typer.echo("  • CLI tools: Will be auto-detected from PATH")
         raise typer.Exit(code=1)
     
+    # Get user selection
     try:
         result = select_option(options, "Select AI Tool:")
         if not result:
             typer.echo("\nCancelled.")
             return
-        
         _, resource_info = result
     except KeyboardInterrupt:
         typer.echo("\nCancelled.")
         return
     
-    if resource_info.startswith("model:"):
-        model_name = resource_info[6:]
-        typer.echo(f"\nStarting {model_name} session (type 'exit' or 'quit' to end)\n")
-        
-        while True:
-            try:
-                user_input = typer.prompt("You", prompt_suffix=": ")
-                if user_input.lower() in ['exit', 'quit', 'q']:
-                    break
-                
-                response = manager.chat(model_name, user_input)
-                typer.echo(f"{model_name}: {response}\n")
-                
-            except KeyboardInterrupt:
-                typer.echo("\nSession ended.")
-                break
-            except Exception as e:
-                typer.echo(f"Error: {str(e)}")
-                break
-        
-    elif resource_info.startswith("tool:"):
-        tool_name = resource_info[5:]
+    # Handle selection
+    resource_type, resource_name = resource_info.split(":", 1)
+    
+    if resource_type == "model":
+        _run_chat_session(manager, resource_name)
+    elif resource_type == "tool":
+        _run_cli_tool(resource_name)
+
+def _run_chat_session(manager: AIModelManager, model_name: str):
+    """Run interactive chat session with a model"""
+    typer.echo(f"\n💬 Chat session: {model_name}")
+    typer.echo("Type 'exit', 'quit', or 'q' to end\n")
+    
+    while True:
         try:
-            subprocess.run([tool_name], check=True)
-        except subprocess.CalledProcessError as e:
-            typer.echo(f"Error: {e}")
-        except FileNotFoundError:
-            typer.echo(f"'{tool_name}' not found in PATH.")
+            user_input = typer.prompt("You", prompt_suffix=": ")
+            if user_input.lower() in ['exit', 'quit', 'q']:
+                typer.echo("Goodbye! 👋")
+                break
+            
+            response = manager.chat(model_name, user_input)
+            typer.echo(f"{model_name}: {response}\n")
+            
+        except KeyboardInterrupt:
+            typer.echo("\n\nSession ended.")
+            break
         except Exception as e:
-            typer.echo(f"Error: {e}")
+            typer.echo(f"❌ Error: {str(e)}")
+            break
+
+def _run_cli_tool(tool_name: str):
+    """Launch external CLI tool"""
+    import subprocess
+    
+    try:
+        subprocess.run([tool_name])
+    except FileNotFoundError:
+        typer.echo(f"❌ '{tool_name}' not found in PATH")
+        typer.echo(f"Try: ai-cli config -a {tool_name}")
+    except KeyboardInterrupt:
+        typer.echo("\n")
+    except Exception as e:
+        typer.echo(f"❌ Error running {tool_name}: {str(e)}")
 
 @app.command()
 def config(
