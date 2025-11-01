@@ -26,7 +26,7 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 
 3. **config.py** - Configuration persistence (116 lines, reduced from 165)
    - `_load_config()` - Helper to load JSON config
-   - `_save_config()` - Helper to save JSON config  
+   - `_save_config()` - Helper to save JSON config
    - `get_api_key()`, `set_api_key()` - API key management
    - `get_custom_cli_tools()`, `add_custom_cli_tool()`, `remove_custom_cli_tool()` - Custom tool management
    - Stores in `~/.ai-cli/config.json`
@@ -35,7 +35,9 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 ## Key Design Decisions
 
 ### Flat Command Structure (No Subcommands)
+
 **All options at top level - no nested commands**
+
 - Main callback accepts all config options directly
 - `main()` checks if any config option is provided, otherwise launches tool selector
 - All flags visible in main `--help` output
@@ -43,7 +45,9 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 - Removed `@app.command()` decorators from `tools()` and `config()` - now internal functions
 
 ### Dynamic CLI Tool Discovery
+
 **No hardcoded tool lists - scans PATH automatically**
+
 - Scans all directories in `PATH` environment variable
 - Pattern matching: exact names (ollama, droid, gemini, claude, amp, qwen)
 - Prefix matching: `ai-`, `gpt-`, `chatgpt-`, `llm-`, `gemini-`, `claude-`
@@ -52,19 +56,23 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 - Custom tools can be added via `ai-cli config -a <tool>`
 
 ### Custom TUI Implementation
+
 **Why not use `pick` or other libraries?**
+
 - Wanted full control over rendering and behavior
 - Eliminated 300+ lines of fallback code
 - Direct control over ANSI escape sequences
 - Better performance with minimal dependencies
 
 **Raw Terminal Mode**
+
 - Uses `tty.setraw()` for character-by-character input
 - Critical: Must use `\r\n` instead of `\n` in raw mode
 - Cursor management: Hide during selection, restore on exit
 - Proper cleanup in finally block to prevent terminal corruption
 
 ### Visual Design
+
 - Selected: Bold text with cyan `>` indicator
 - Unselected: Dimmed (gray) text
 - Alignment: 2 spaces + indicator + 1 space + text
@@ -73,55 +81,67 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 ## Common Pitfalls & Solutions
 
 ### Issue: Text wrapping/misalignment in TUI
+
 **Cause:** Using `\n` in raw terminal mode only moves cursor down, not to line start
 **Solution:** Always use `\r\n` (carriage return + newline) in raw mode
 
 ### Issue: Terminal left in broken state
+
 **Cause:** Not restoring terminal settings or showing cursor
 **Solution:** Always use try/finally block to restore settings and show cursor
 
 ### Issue: ANSI codes visible as text
+
 **Cause:** Terminal doesn't support ANSI or output is redirected
 **Solution:** Check `sys.stdin.isatty()` before entering TUI mode
 
 ## Key Functions Reference
 
 ### select_option()
+
 ```python
 def select_option(options: List[Tuple[str, str]], title: str) -> Optional[Tuple[str, str]]
 ```
+
 - Returns: (display_name, resource_info) or None if cancelled
 - Navigation: Arrow keys (↑/↓), vim keys (j/k), Enter to select, q/ESC to quit
 - Handles: Ctrl+C gracefully
 
-### _run_chat_session()
+### \_run_chat_session()
+
 ```python
 def _run_chat_session(manager: AIModelManager, model_name: str)
 ```
+
 - Runs interactive chat loop with AI model
 - Shows 💬 emoji and exit instructions
 - Handles 'exit', 'quit', 'q' commands
 - Graceful KeyboardInterrupt handling
 
-### _run_cli_tool()
+### \_run_cli_tool()
+
 ```python
 def _run_cli_tool(tool_name: str)
 ```
+
 - Launches external CLI tool via subprocess
 - Better error messages with ❌ emoji
 - Suggests `ai-cli config -a` for missing tools
 - Handles FileNotFoundError, KeyboardInterrupt gracefully
 
-### _load_config() / _save_config()
+### \_load_config() / \_save_config()
+
 ```python
 def _load_config() -> Dict  # Returns empty dict if file doesn't exist
 def _save_config(config: Dict) -> bool  # Returns success status
 ```
+
 - Eliminates duplicate JSON loading/saving code
 - Specific exception handling (json.JSONDecodeError, IOError)
 - Used by all config methods for consistency
 
 ### ANSI Escape Sequences Used
+
 ```python
 "\033[2J\033[H"      # Clear screen and move to home
 "\033[?25l"          # Hide cursor
@@ -135,18 +155,21 @@ def _save_config(config: Dict) -> bool  # Returns success status
 ## Development Workflow
 
 ### Testing TUI
+
 ```bash
 # Must run in actual terminal (not piped/redirected)
 venv/bin/ai-cli tools
 ```
 
 ### Adding New Models
+
 1. Add API client setup in `AIModelManager._setup_apis()`
 2. Add model method (e.g., `def new_model(self, prompt: str)`)
 3. Add case in `chat()` method
 4. Update `get_available_models()` to include when configured
 
 ### Adding New Commands
+
 1. Add `@app.command()` decorated function in cli.py
 2. Use typer.Option for flags/arguments
 3. Keep error messages concise
@@ -164,6 +187,7 @@ venv/bin/ai-cli tools
 ## Dependencies
 
 **Core:**
+
 - typer - CLI framework
 - anthropic - Claude API
 - google-generativeai - Gemini API
@@ -171,12 +195,14 @@ venv/bin/ai-cli tools
 - python-dotenv - Environment variables
 
 **System:**
+
 - termios, tty - Raw terminal control (Unix only)
 - subprocess - For Ollama and CLI tool detection
 
 ## Future Considerations
 
 ### Potential Improvements
+
 - Async model calls for faster responses
 - Conversation history/context management
 - Model-specific parameter tuning
@@ -184,6 +210,7 @@ venv/bin/ai-cli tools
 - Windows native support (currently requires WSL for raw mode)
 
 ### Known Limitations
+
 - TUI requires TTY (won't work with piped input/output)
 - Raw terminal mode is Unix-specific (termios/tty)
 - No streaming support (all responses are complete)
@@ -192,12 +219,14 @@ venv/bin/ai-cli tools
 ## Testing Notes
 
 **Manual Testing Required:**
+
 - TUI must be tested in actual terminal
 - Test arrow keys, vim keys, and all exit methods
 - Verify cursor restoration on all exit paths
 - Check alignment with different option text lengths
 
 **Automated Testing:**
+
 - Model detection logic
 - Config file read/write
 - API key validation
@@ -215,7 +244,7 @@ venv/bin/ai-cli tools
 ## Contact Points for Issues
 
 - TUI rendering issues → Check `\r\n` usage and cursor hide/show
-- Terminal corruption → Check finally blocks and cursor restoration  
+- Terminal corruption → Check finally blocks and cursor restoration
 - Alignment issues → Verify spacing before/after indicator
 - Model not detected → Check `_setup_apis()` and API key configuration
 - Command not working → Check typer decorators and parameter types

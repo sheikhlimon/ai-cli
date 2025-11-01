@@ -46,11 +46,13 @@ echo "CLAUDE_API_KEY=sk-..." > .env
 ## Installation
 
 **Users:**
+
 ```bash
 pipx install git+https://github.com/sheikhlimon/ai-cli.git
 ```
 
 **Developers:**
+
 ```bash
 git clone https://github.com/sheikhlimon/ai-cli.git
 cd ai-cli

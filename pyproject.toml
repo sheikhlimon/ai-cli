@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ai-cli"
 version = "0.1.0"
-description = "A CLI tool for managing multiple AI models like Qwen, Claude, Gemini, etc."
+description = "A CLI tool for managing multiple AI models like Claude, Gemini, Qwen etc."
 readme = "README.md"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+authors = [{name = "Sheikh Limon", email = "sheikhlimon404@gmail.com"}]
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
