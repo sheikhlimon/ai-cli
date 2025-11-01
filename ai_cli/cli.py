@@ -180,12 +180,13 @@ def tools():
 @app.command()
 def config(
     set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set API key: provider=key"),
-    list_status: bool = typer.Option(False, "--list", "-l", help="List config status"),
-    reset: bool = typer.Option(False, "--reset", help="Reset config"),
+    list_status: bool = typer.Option(False, "--list", "-l", help="List API key status"),
+    reset: bool = typer.Option(False, "--reset", help="Reset all configuration"),
     add_tool: Optional[str] = typer.Option(None, "--add-tool", help="Add custom CLI tool"),
-    list_tools: bool = typer.Option(False, "--list-tools", help="List custom CLI tools")
+    remove_tool: Optional[str] = typer.Option(None, "--remove-tool", help="Remove custom CLI tool"),
+    list_tools: bool = typer.Option(False, "--list-tools", help="List custom/excluded CLI tools")
 ):
-    """Manage API keys and CLI tools configuration"""
+    """Manage API keys and CLI tools"""
     config_manager = ConfigManager()
     
     if reset:
@@ -223,9 +224,16 @@ def config(
             typer.echo(f"Warning: '{add_tool}' not found in PATH")
         
         if config_manager.add_custom_cli_tool(add_tool):
-            typer.echo(f"Added '{add_tool}' to custom CLI tools")
+            typer.echo(f"✓ Added '{add_tool}' to custom CLI tools")
         else:
-            typer.echo(f"Failed to add '{add_tool}'")
+            typer.echo(f"✗ Failed to add '{add_tool}'")
+        return
+    
+    if remove_tool:
+        if config_manager.remove_custom_cli_tool(remove_tool):
+            typer.echo(f"✓ Removed '{remove_tool}' from custom CLI tools")
+        else:
+            typer.echo(f"✗ Tool '{remove_tool}' not found in custom list")
         return
     
     if list_tools:
