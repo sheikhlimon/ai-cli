@@ -14,7 +14,8 @@ load_dotenv()
 app = typer.Typer(
     name="ai-cli",
     help="Unified interface for AI models and CLI tools",
-    add_completion=False  # Disable shell completion options
+    add_completion=False,  # Disable shell completion options
+    no_args_is_help=False  # Allow running without args
 )
 
 
@@ -268,6 +269,17 @@ def config(
             typer.echo(f"  {provider.upper()}: {status_text}")
             if info['configured']:
                 typer.echo(f"    Preview: {info['key_preview']}")
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """
+    Main callback - runs 'tools' command by default.
+    
+    When user runs 'ai-cli' without arguments, this launches the
+    interactive tool selector automatically.
+    """
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(tools)
 
 if __name__ == "__main__":
     app()
