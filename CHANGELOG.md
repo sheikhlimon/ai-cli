@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - 2025-11-01
 
+### 🚨 BREAKING CHANGES
+- **Removed `tools` subcommand** - Just run `ai-cli` directly (was: `ai-cli tools`)
+- **Removed `config` subcommand** - All options now at top level (e.g., `ai-cli -l` instead of `ai-cli config --list`)
+
 ### Major Features
-- **Dynamic CLI tool discovery** - Auto-detects AI tools from PATH (droid, gemini, claude, amp, ollama, etc.)
-- **Default command** - Just run `ai-cli` without subcommands to launch tool selector
-- **Custom tool management** - Add/remove custom tools via config
-- **Short flags** - Simple flags: `-s` (set), `-a` (add), `-r` (remove), `-l` (list), `-t` (tools)
+- **Flat command structure** - All options at top level, no nested subcommands
+- **Dynamic CLI tool discovery** - Auto-detects AI tools from PATH
+- **One-command interface** - `ai-cli` does everything
+- **Frontlined options** - All flags visible in main `--help`
 
 ### Added
 - Dynamic PATH scanning for AI CLI tools with pattern matching

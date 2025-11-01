@@ -8,13 +8,13 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 
 ### Core Modules
 
-1. **cli.py** - Main CLI interface (285 lines)
+1. **cli.py** - Main CLI interface (306 lines)
+   - `main()` - Main callback handling all options and default behavior
    - `select_option()` - Custom TUI selector using raw terminal mode
-   - `tools()` - Interactive model/tool selector command (default)
+   - `tools()` - Interactive model/tool selector (internal function)
    - `_run_chat_session()` - Helper for model chat sessions
    - `_run_cli_tool()` - Helper for launching external CLI tools
-   - `config()` - Configuration with short flags (-s, -a, -r, -l, -t)
-   - `main()` - Callback for default command behavior
+   - `config()` - Configuration logic (internal function)
 
 2. **models.py** - AI model management (259 lines)
    - `AIModelManager` - Main class for model interactions
@@ -34,12 +34,13 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 
 ## Key Design Decisions
 
-### Default Command Behavior
-**Run `ai-cli` without subcommands to launch tool selector**
-- Uses `@app.callback(invoke_without_command=True)`
-- Checks `ctx.invoked_subcommand is None` before invoking `tools()`
-- Set `no_args_is_help=False` to allow callback execution
-- Provides seamless UX - user doesn't need to remember `tools` subcommand
+### Flat Command Structure (No Subcommands)
+**All options at top level - no nested commands**
+- Main callback accepts all config options directly
+- `main()` checks if any config option is provided, otherwise launches tool selector
+- All flags visible in main `--help` output
+- Simpler UX: `ai-cli -l` instead of `ai-cli config --list`
+- Removed `@app.command()` decorators from `tools()` and `config()` - now internal functions
 
 ### Dynamic CLI Tool Discovery
 **No hardcoded tool lists - scans PATH automatically**

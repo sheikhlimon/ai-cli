@@ -1,75 +1,68 @@
 # AI CLI
 
-Unified interface for AI models and CLI tools with interactive selection.
-
-## Features
-
-- **Just run `ai-cli`** - Interactive tool selector launches automatically
-- Auto-detects AI tools (droid, gemini, claude, amp, ollama, etc.)
-- Supports cloud models (Qwen, Claude, Gemini) and local Ollama models
-- Simple config with short flags: `-s` (set), `-a` (add), `-l` (list)
-- Arrow keys or vim motions (j/k) for navigation
-
-## Installation
-
-### For Users (Simple)
-
-```bash
-# Install with pipx (recommended)
-pipx install git+https://github.com/sheikhlimon/ai-cli.git
-
-# Use it - that's it!
-ai-cli
-```
-
-### For Developers
-
-```bash
-# Clone and setup
-git clone https://github.com/sheikhlimon/ai-cli.git
-cd ai-cli
-python3 -m venv venv
-venv/bin/pip install -e .
-
-# Run it
-venv/bin/ai-cli
-```
-
-See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
+Unified interface for AI models and CLI tools. Just type `ai-cli`.
 
 ## Quick Start
 
 ```bash
-# Launch interactive selector (or just: ai-cli)
+# Install
+pipx install git+https://github.com/sheikhlimon/ai-cli.git
+
+# Run - that's it!
 ai-cli
-
-# Configure API keys
-ai-cli config -s claude=sk-...
-ai-cli config -s gemini=...
-ai-cli config -s qwen=...
-
-# Add custom AI tools (if not auto-detected)
-ai-cli config -a my-tool
-
-# View everything
-ai-cli config -l              # Show API keys
-ai-cli config -t              # Show custom tools
 ```
 
-## Configuration
+## Usage
 
-Set API keys via command or `.env` file:
-
-```env
-CLAUDE_API_KEY=your_key
-GEMINI_API_KEY=your_key
-QWEN_API_KEY=your_key
+```bash
+ai-cli              # Launch interactive selector
+ai-cli -s claude=key  # Set API key
+ai-cli -a my-tool   # Add custom tool
+ai-cli -l           # Show config
+ai-cli -t           # List custom tools
+ai-cli --help       # See all options
 ```
+
+## Features
+
+- **Zero config needed** - Auto-detects AI tools from PATH
+- **One command** - `ai-cli` does everything
+- **Smart discovery** - Finds droid, gemini, claude, amp, ollama, etc.
+- **Cloud + Local** - Works with API-based models and Ollama
+- **Simple flags** - Short options for everything (-s, -a, -r, -l, -t)
+
+## Setup API Keys
+
+```bash
+# Via command
+ai-cli -s claude=sk-...
+ai-cli -s gemini=...
+ai-cli -s qwen=...
+
+# Or via .env file
+echo "CLAUDE_API_KEY=sk-..." > .env
+```
+
+## Installation
+
+**Users:**
+```bash
+pipx install git+https://github.com/sheikhlimon/ai-cli.git
+```
+
+**Developers:**
+```bash
+git clone https://github.com/sheikhlimon/ai-cli.git
+cd ai-cli
+python3 -m venv venv
+venv/bin/pip install -e .
+```
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ## Requirements
 
-- Python 3.8+
-- Optional: [Ollama](https://ollama.ai/) for local models
+Python 3.8+ • Optional: [Ollama](https://ollama.ai)
 
 ## License
 
