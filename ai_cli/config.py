@@ -1,8 +1,8 @@
 """Configuration management for the AI CLI tool"""
 import os
-import typer
+import json
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 class ConfigManager:
     def __init__(self):
@@ -18,148 +18,86 @@ class ConfigManager:
         """Ensure the config directory exists"""
         self.config_dir.mkdir(exist_ok=True)
     
+    def _load_config(self) -> Dict:
+        """Load config from file, return empty dict if not exists or invalid"""
+        if not self.config_file.exists():
+            return {}
+        try:
+            with open(self.config_file, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {}
+    
+    def _save_config(self, config: Dict) -> bool:
+        """Save config to file"""
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+            return True
+        except IOError:
+            return False
+    
     def get_api_key(self, provider: str) -> Optional[str]:
-        """Get API key for a specific provider"""
-        # Try to get from environment variables first
+        """Get API key for a specific provider (env var takes precedence)"""
         env_key = os.getenv(f"{provider.upper()}_API_KEY")
         if env_key:
             return env_key
         
-        # Try to get from config file
-        if self.config_file.exists():
-            import json
-            try:
-                with open(self.config_file, 'r') as f:
-                    config = json.load(f)
-                return config.get("api_keys", {}).get(provider.lower())
-            except:
-                pass
-        
-        return None
+        config = self._load_config()
+        return config.get("api_keys", {}).get(provider.lower())
     
     def set_api_key(self, provider: str, key: str) -> bool:
         """Set API key for a specific provider"""
-        # Update in environment (runtime only)
         os.environ[f"{provider.upper()}_API_KEY"] = key
         
-        # Store in config file
-        config = {}
-        if self.config_file.exists():
-            import json
-            try:
-                with open(self.config_file, 'r') as f:
-                    config = json.load(f)
-            except:
-                config = {}
-        
+        config = self._load_config()
         if "api_keys" not in config:
             config["api_keys"] = {}
-        
         config["api_keys"][provider.lower()] = key
         
-        try:
-            import json
-            with open(self.config_file, 'w') as f:
-                json.dump(config, f, indent=2)
-            return True
-        except:
-            return False
+        return self._save_config(config)
     
     def get_providers_status(self) -> dict:
         """Get status of all configured providers"""
-        providers = ["openai", "claude", "gemini", "qwen"]
+        providers = ["claude", "gemini", "qwen"]
         status = {}
         
         for provider in providers:
             key = self.get_api_key(provider)
             status[provider] = {
-                "configured": key is not None and key.strip() != "",
+                "configured": bool(key and key.strip()),
                 "key_preview": f"{key[:4]}..." if key and len(key) > 4 else "Not set"
             }
         
         return status
     
-    def create_env_file(self, openai_key: str = "", claude_key: str = "", 
-                        gemini_key: str = "", qwen_key: str = "") -> bool:
-        """Create a .env file with API keys"""
-        try:
-            with open(self.env_file, 'w') as f:
-                f.write(f"OPENAI_API_KEY={openai_key}\n")
-                f.write(f"CLAUDE_API_KEY={claude_key}\n")
-                f.write(f"GEMINI_API_KEY={gemini_key}\n")
-                f.write(f"QWEN_API_KEY={qwen_key}\n")
-            return True
-        except:
-            return False
-    
     def get_custom_cli_tools(self) -> List[str]:
         """Get list of custom CLI tools from config"""
-        if not self.config_file.exists():
-            return []
-        
-        import json
-        try:
-            with open(self.config_file, 'r') as f:
-                config = json.load(f)
-            return config.get("custom_cli_tools", [])
-        except:
-            return []
+        return self._load_config().get("custom_cli_tools", [])
     
     def get_excluded_cli_tools(self) -> List[str]:
         """Get list of excluded CLI tools from config"""
-        if not self.config_file.exists():
-            return []
-        
-        import json
-        try:
-            with open(self.config_file, 'r') as f:
-                config = json.load(f)
-            return config.get("excluded_cli_tools", [])
-        except:
-            return []
+        return self._load_config().get("excluded_cli_tools", [])
     
     def add_custom_cli_tool(self, tool: str) -> bool:
         """Add a custom CLI tool to config"""
-        config = {}
-        if self.config_file.exists():
-            import json
-            try:
-                with open(self.config_file, 'r') as f:
-                    config = json.load(f)
-            except:
-                config = {}
+        config = self._load_config()
         
         if "custom_cli_tools" not in config:
             config["custom_cli_tools"] = []
         
         if tool not in config["custom_cli_tools"]:
             config["custom_cli_tools"].append(tool)
+            return self._save_config(config)
         
-        try:
-            import json
-            with open(self.config_file, 'w') as f:
-                json.dump(config, f, indent=2)
-            return True
-        except:
-            return False
+        return True  # Already exists
     
     def remove_custom_cli_tool(self, tool: str) -> bool:
         """Remove a custom CLI tool from config"""
-        if not self.config_file.exists():
-            return False
+        config = self._load_config()
         
-        import json
-        try:
-            with open(self.config_file, 'r') as f:
-                config = json.load(f)
-            
-            if "custom_cli_tools" in config and tool in config["custom_cli_tools"]:
-                config["custom_cli_tools"].remove(tool)
-                
-                with open(self.config_file, 'w') as f:
-                    json.dump(config, f, indent=2)
-                return True
-        except:
-            pass
+        if "custom_cli_tools" in config and tool in config["custom_cli_tools"]:
+            config["custom_cli_tools"].remove(tool)
+            return self._save_config(config)
         
         return False

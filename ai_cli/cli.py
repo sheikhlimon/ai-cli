@@ -264,8 +264,6 @@ def config(
         typer.echo("Configuration:")
         
         for provider, info in status.items():
-            if provider == 'openai':
-                continue
             status_text = "SET" if info['configured'] else "NOT SET"
             typer.echo(f"  {provider.upper()}: {status_text}")
             if info['configured']:
