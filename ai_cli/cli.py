@@ -1,8 +1,11 @@
 """Main CLI module for the AI model manager"""
 import typer
 import os
+import sys
+import tty
+import termios
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Optional, List, Tuple
 from .models import AIModelManager
 from .config import ConfigManager
 
@@ -10,221 +13,219 @@ load_dotenv()
 
 app = typer.Typer(name="AI CLI", help="A CLI tool for managing multiple AI models")
 
-@app.command()
-def list():
-    """List all available AI models"""
-    manager = AIModelManager()
-    models = manager.get_available_models()
+
+def select_option(options: List[Tuple[str, str]], title: str = "Select an option:") -> Optional[Tuple[str, str]]:
+    """Interactive selection with arrow keys and vim motions (j/k)"""
+    if not options:
+        return None
     
-    # Separate cloud and local models for better display
-    cloud_models = [m for m in models if not m.startswith("ollama:")]
-    local_models = [m for m in models if m.startswith("ollama:")]
+    current = 0
     
-    if models:
-        typer.echo("Available AI models:")
+    def clear_screen():
+        """Clear screen properly"""
+        sys.stdout.write("\033[2J\033[H")
+        sys.stdout.flush()
+    
+    def hide_cursor():
+        """Hide terminal cursor"""
+        sys.stdout.write("\033[?25l")
+        sys.stdout.flush()
+    
+    def show_cursor():
+        """Show terminal cursor"""
+        sys.stdout.write("\033[?25h")
+        sys.stdout.flush()
+    
+    def render():
+        """Render the selection menu"""
+        clear_screen()
+        sys.stdout.write(f"\r\n{title}\r\n")
+        sys.stdout.write("  ↑/↓ or j/k to navigate • Enter to select • q/ESC to quit\r\n\r\n")
         
-        if cloud_models:
-            typer.echo("  Cloud models:")
-            for model in cloud_models:
-                typer.echo(f"    - {model}")
+        for idx, (display, _) in enumerate(options):
+            if idx == current:
+                # Selected item with colored indicator and bold text
+                sys.stdout.write(f"  \033[1;36m>\033[0m \033[1m{display}\033[0m\r\n")
+            else:
+                # Unselected item with dimmed text
+                sys.stdout.write(f"    \033[2m{display}\033[0m\r\n")
+        sys.stdout.flush()
+    
+    # Check if stdin is a terminal
+    if not sys.stdin.isatty():
+        typer.echo("Error: Interactive mode requires a terminal")
+        return None
+    
+    # Save terminal settings
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    
+    try:
+        tty.setraw(fd)
+        hide_cursor()
+        render()
         
-        if local_models:
-            typer.echo("  Local Ollama models:")
-            for model in local_models:
-                typer.echo(f"    - {model}")
-    else:
-        typer.echo("No AI models are currently configured.")
-        typer.echo("  - Cloud models: Please set up your API keys using 'ai-cli config'")
-        typer.echo("  - Local models: Please install and start Ollama server with some models")
+        while True:
+            ch = sys.stdin.read(1)
+            
+            # Handle escape sequences (arrow keys)
+            if ch == '\x1b':
+                next1 = sys.stdin.read(1)
+                if next1 == '[':
+                    next2 = sys.stdin.read(1)
+                    if next2 == 'A':  # Up arrow
+                        current = (current - 1) % len(options)
+                        render()
+                    elif next2 == 'B':  # Down arrow
+                        current = (current + 1) % len(options)
+                        render()
+                else:
+                    # ESC pressed (quit)
+                    clear_screen()
+                    show_cursor()
+                    return None
+            elif ch in ('j', 'J'):  # Vim down
+                current = (current + 1) % len(options)
+                render()
+            elif ch in ('k', 'K'):  # Vim up
+                current = (current - 1) % len(options)
+                render()
+            elif ch in ('q', 'Q'):  # Quit
+                clear_screen()
+                show_cursor()
+                return None
+            elif ch in ('\r', '\n'):  # Enter
+                clear_screen()
+                show_cursor()
+                return options[current]
+            elif ch == '\x03':  # Ctrl+C
+                clear_screen()
+                show_cursor()
+                raise KeyboardInterrupt
+    
+    finally:
+        show_cursor()
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 @app.command()
-def qwen(prompt: str = typer.Argument(..., help="The prompt to send to Qwen model"), 
-         output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the response")):
-    """Use Qwen model with the given prompt"""
-    manager = AIModelManager()
-    response = manager.qwen(prompt)
-    
-    if output:
-        with open(output, 'w') as f:
-            f.write(response)
-        typer.echo(f"Response saved to {output}")
-    else:
-        typer.echo(response)
-
-@app.command()
-def claude(prompt: str = typer.Argument(..., help="The prompt to send to Claude model"), 
-           output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the response")):
-    """Use Claude model with the given prompt"""
-    manager = AIModelManager()
-    response = manager.claude(prompt)
-    
-    if output:
-        with open(output, 'w') as f:
-            f.write(response)
-        typer.echo(f"Response saved to {output}")
-    else:
-        typer.echo(response)
-
-@app.command()
-def gemini(prompt: str = typer.Argument(..., help="The prompt to send to Gemini model"), 
-           output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the response")):
-    """Use Gemini model with the given prompt"""
-    manager = AIModelManager()
-    response = manager.gemini(prompt)
-    
-    if output:
-        with open(output, 'w') as f:
-            f.write(response)
-        typer.echo(f"Response saved to {output}")
-    else:
-        typer.echo(response)
-
-@app.command()
-def openai_model(prompt: str = typer.Argument(..., help="The prompt to send to OpenAI model (GPT)"), 
-                 model: str = typer.Option("gpt-3.5-turbo", "--model", "-m", help="OpenAI model to use"),
-                 output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the response")):
-    """Use OpenAI model (e.g., GPT) with the given prompt"""
-    manager = AIModelManager()
-    response = manager.openai_model(prompt, model)
-    
-    if output:
-        with open(output, 'w') as f:
-            f.write(response)
-        typer.echo(f"Response saved to {output}")
-    else:
-        typer.echo(response)
-
-@app.command()
-def ollama(prompt: str = typer.Argument(..., help="The prompt to send to Ollama model"), 
-           model: str = typer.Option("llama2", "--model", "-m", help="Ollama model to use"),
-           output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the response")):
-    """Use Ollama model with the given prompt"""
-    manager = AIModelManager()
-    response = manager.ollama_model(prompt, model)
-    
-    if output:
-        with open(output, 'w') as f:
-            f.write(response)
-        typer.echo(f"Response saved to {output}")
-    else:
-        typer.echo(response)
-
-@app.command()
-def interactive(model: str = typer.Argument(..., help="Model to use interactively (e.g., qwen, claude, gemini, gpt-3.5-turbo, ollama:llama2)")):
-    """Start an interactive session with a specific model"""
-    import sys
+def tools():
+    """Interactive selection interface to choose and launch available AI CLI tools"""
+    import subprocess
     
     manager = AIModelManager()
-    available_models = manager.get_available_models()
+    resources = manager.get_available_resources()
     
-    if model not in available_models:
-        typer.echo(f"Model '{model}' is not available. Available models: {', '.join(available_models) if available_models else 'None'}")
+    options = []
+    
+    # Add models
+    for model in resources["models"]:
+        if model.startswith("ollama:"):
+            display = f"{model[7:]} (Ollama)"
+        else:
+            display = f"{model} (Cloud)"
+        options.append((display, f"model:{model}"))
+    
+    # Add CLI tools
+    for tool in resources["cli_tools"]:
+        options.append((f"{tool} (CLI)", f"tool:{tool}"))
+    
+    if not options:
+        typer.echo("No AI models or CLI tools available.")
+        typer.echo("  - Cloud: Set API keys (ai-cli config)")
+        typer.echo("  - Local: Install Ollama with models")
         raise typer.Exit(code=1)
     
-    typer.echo(f"Starting interactive session with {model}. Type 'exit' or 'quit' to end.")
-    typer.echo("="*50)
+    try:
+        result = select_option(options, "Select AI Tool:")
+        if not result:
+            typer.echo("\nCancelled.")
+            return
+        
+        _, resource_info = result
+    except KeyboardInterrupt:
+        typer.echo("\nCancelled.")
+        return
     
-    # Handle different model types
-    while True:
-        try:
-            user_input = typer.prompt("You", prompt_suffix=": ")
-            
-            if user_input.lower() in ['exit', 'quit', 'q']:
-                break
+    if resource_info.startswith("model:"):
+        model_name = resource_info[6:]
+        typer.echo(f"\nStarting {model_name} session (type 'exit' or 'quit' to end)\n")
+        
+        while True:
+            try:
+                user_input = typer.prompt("You", prompt_suffix=": ")
+                if user_input.lower() in ['exit', 'quit', 'q']:
+                    break
                 
-            # Call the appropriate model method based on model type
-            if model.startswith("ollama:"):
-                ollama_model_name = model[7:]  # Remove "ollama:" prefix
-                response = manager.ollama_model(user_input, ollama_model_name)
-            elif model == "qwen":
-                response = manager.qwen(user_input)
-            elif model == "claude":
-                response = manager.claude(user_input)
-            elif model == "gemini":
-                response = manager.gemini(user_input)
-            elif model in ["gpt-3.5-turbo", "gpt-4"]:
-                response = manager.openai_model(user_input, model)
-            else:
-                response = f"Unknown model type: {model}"
-            
-            typer.echo(f"{model.capitalize()}: {response}")
-            typer.echo()
-            
-        except KeyboardInterrupt:
-            typer.echo("\nSession interrupted. Goodbye!")
-            break
+                response = manager.chat(model_name, user_input)
+                typer.echo(f"{model_name}: {response}\n")
+                
+            except KeyboardInterrupt:
+                typer.echo("\nSession ended.")
+                break
+            except Exception as e:
+                typer.echo(f"Error: {str(e)}")
+                break
+        
+    elif resource_info.startswith("tool:"):
+        tool_name = resource_info[5:]
+        try:
+            subprocess.run([tool_name], check=True)
+        except subprocess.CalledProcessError as e:
+            typer.echo(f"Error: {e}")
+        except FileNotFoundError:
+            typer.echo(f"'{tool_name}' not found in PATH.")
         except Exception as e:
-            typer.echo(f"Error during interaction: {str(e)}")
-            break
-    
-    typer.echo("Interactive session ended.")
-
-@app.command()
-def compare(prompt: str = typer.Argument(..., help="The prompt to send to all models for comparison"), 
-            output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the comparison")):
-    """Compare responses from all available models"""
-    manager = AIModelManager()
-    responses = manager.compare_models(prompt)
-    
-    full_output = ""
-    for model, response in responses.items():
-        section = f"\n--- {model.upper()} ---\n{response}\n"
-        full_output += section
-        typer.echo(section)
-    
-    if output:
-        with open(output, 'w') as f:
-            f.write(full_output)
-        typer.echo(f"Comparison saved to {output}")
+            typer.echo(f"Error: {e}")
 
 @app.command()
 def config(
-    set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set an API key in the format 'provider=key'"),
-    list_status: bool = typer.Option(False, "--list", "-l", help="List configuration status"),
-    reset: bool = typer.Option(False, "--reset", help="Reset all configuration")
+    set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set API key: provider=key"),
+    list_status: bool = typer.Option(False, "--list", "-l", help="List config status"),
+    reset: bool = typer.Option(False, "--reset", help="Reset config")
 ):
-    """Manage configuration"""
+    """Manage API keys configuration"""
     config_manager = ConfigManager()
     
     if reset:
-        typer.confirm("Are you sure you want to reset all configuration?", abort=True)
+        typer.confirm("Reset all configuration?", abort=True)
         config_file = config_manager.config_dir / "config.json"
         if config_file.exists():
             config_file.unlink()
-            typer.echo("Configuration reset successfully.")
+            typer.echo("Configuration reset.")
         else:
-            typer.echo("No configuration file found to reset.")
+            typer.echo("No configuration file found.")
         return
     
     if set_key:
         if '=' not in set_key:
-            typer.echo("Please provide the key in the format 'provider=key'")
+            typer.echo("Format: provider=key")
             raise typer.Exit(code=1)
         
         provider, key = set_key.split('=', 1)
         provider = provider.strip().lower()
         key = key.strip()
         
-        if provider not in ['openai', 'claude', 'gemini', 'qwen']:
-            typer.echo(f"Unsupported provider: {provider}. Supported: openai, claude, gemini, qwen")
+        if provider not in ['claude', 'gemini', 'qwen']:
+            typer.echo(f"Unsupported: {provider}. Use: claude, gemini, qwen")
             raise typer.Exit(code=1)
         
         if config_manager.set_api_key(provider, key):
-            typer.echo(f"{provider.upper()} API key set successfully!")
+            typer.echo(f"{provider.upper()} key set.")
         else:
-            typer.echo(f"Failed to set {provider.upper()} API key.")
+            typer.echo(f"Failed to set {provider.upper()} key.")
         return
     
     if list_status or not set_key:
-        # Show current configuration status
         status = config_manager.get_providers_status()
-        typer.echo("Current configuration status:")
+        typer.echo("Configuration:")
         
         for provider, info in status.items():
+            if provider == 'openai':
+                continue
             status_text = "SET" if info['configured'] else "NOT SET"
             typer.echo(f"  {provider.upper()}: {status_text}")
             if info['configured']:
-                typer.echo(f"    Key preview: {info['key_preview']}")
+                typer.echo(f"    Preview: {info['key_preview']}")
 
 if __name__ == "__main__":
     app()

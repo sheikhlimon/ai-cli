@@ -1,8 +1,6 @@
 """AI model management module"""
 import os
 from typing import Dict, Optional
-import openai
-from openai import OpenAI
 import anthropic
 import google.generativeai as genai
 import subprocess
@@ -24,13 +22,6 @@ class AIModelManager:
         # Get API keys from environment or config
         from .config import ConfigManager
         config_manager = ConfigManager()
-        
-        # OpenAI (for models that use OpenAI API format)
-        openai_api_key = os.getenv("OPENAI_API_KEY") or config_manager.get_api_key("openai")
-        if openai_api_key:
-            self.openai_client = OpenAI(api_key=openai_api_key)
-        else:
-            self.openai_client = None
         
         # Anthropic (for Claude)
         claude_api_key = os.getenv("CLAUDE_API_KEY") or config_manager.get_api_key("claude")
@@ -61,6 +52,9 @@ class AIModelManager:
             self.ollama_models = self._get_ollama_models()
         else:
             self.ollama_models = []
+            
+        # Available AI CLI tools
+        self.available_cli_tools = self._check_cli_availability()
 
     def _check_ollama_availability(self) -> bool:
         """Check if Ollama is available on the system"""
@@ -92,21 +86,53 @@ class AIModelManager:
             return []
         except Exception:
             return []
+
+    def _check_cli_availability(self) -> list:
+        """Check for available AI CLI tools on the system"""
+        import shutil
+        
+        available_clis = []
+        
+        # Check for various AI CLI tools using only which to avoid system command issues
+        # Common AI CLIs that users might have installed
+        cli_tools = [
+            'ollama', 'qwen', 'amp', 'gemini', 'claude', 'droid',  # Common AI CLIs
+            'gpt', 'open-interpreter', 'jan', 'continuedev', 'phidata'  # Other possible tools
+        ]
+        
+        for tool in cli_tools:
+            if shutil.which(tool):
+                available_clis.append(tool)
+        
+        return available_clis
     
     def get_available_models(self) -> list:
-        """Get list of available models based on configured API keys"""
+        """Get list of available models based on configured API keys and local models"""
         available = []
+        
         if self.qwen_enabled:
             available.append("qwen")
         if self.claude_client:
             available.append("claude")
         if self.gemini_model:
             available.append("gemini")
-        # Add OpenAI models if available
-        if self.openai_client:
-            available.append("gpt-3.5-turbo")  # More specific naming
-            available.append("gpt-4")  # Could support multiple models
+        if self.ollama_available and self.ollama_models:
+            available.extend([f"ollama:{model}" for model in self.ollama_models])
+            
         return available
+    
+    def chat(self, model_name: str, prompt: str) -> str:
+        """Unified chat interface for all models"""
+        if model_name.startswith("ollama:"):
+            return self.ollama_model(prompt, model_name[7:])
+        elif model_name == "qwen":
+            return self.qwen(prompt)
+        elif model_name == "claude":
+            return self.claude(prompt)
+        elif model_name == "gemini":
+            return self.gemini(prompt)
+        else:
+            return f"Unknown model: {model_name}"
     
     def qwen(self, prompt: str) -> str:
         """Get response from Qwen model"""
@@ -182,76 +208,9 @@ class AIModelManager:
         except Exception as e:
             return f"Error calling Ollama model {model}: {str(e)}"
     
-    def openai_model(self, prompt: str, model: str = "gpt-3.5-turbo") -> str:
-        """Get response from OpenAI model (e.g., GPT)"""
-        if not self.openai_client:
-            return "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
-        
-        try:
-            response = self.openai_client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=500
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            return f"Error calling OpenAI model {model}: {str(e)}"
-    
-    def get_available_models(self) -> list:
-        """Get list of available models based on configured API keys and local models"""
-        available = []
-        if self.qwen_enabled:
-            available.append("qwen")
-        if self.claude_client:
-            available.append("claude")
-        if self.gemini_model:
-            available.append("gemini")
-        # Add OpenAI models if available
-        if self.openai_client:
-            available.append("gpt-3.5-turbo")  # More specific naming
-            available.append("gpt-4")  # Could support multiple models
-        # Add Ollama models if available
-        if self.ollama_available and self.ollama_models:
-            available.extend([f"ollama:{model}" for model in self.ollama_models])
-        return available
-    
-    def compare_models(self, prompt: str) -> Dict[str, str]:
-        """Get responses from all available models"""
-        responses = {}
-        
-        # Collect responses from all available models, handling errors gracefully
-        if self.qwen_enabled:
-            try:
-                responses['qwen'] = self.qwen(prompt)
-            except Exception as e:
-                responses['qwen'] = f"Error getting response from Qwen: {str(e)}"
-        
-        if self.claude_client:
-            try:
-                responses['claude'] = self.claude(prompt)
-            except Exception as e:
-                responses['claude'] = f"Error getting response from Claude: {str(e)}"
-        
-        if self.gemini_model:
-            try:
-                responses['gemini'] = self.gemini(prompt)
-            except Exception as e:
-                responses['gemini'] = f"Error getting response from Gemini: {str(e)}"
-            
-        # Include a default OpenAI model response if available
-        if self.openai_client:
-            try:
-                responses['gpt-3.5-turbo'] = self.openai_model(prompt, "gpt-3.5-turbo")
-            except Exception as e:
-                responses['gpt-3.5-turbo'] = f"Error getting response from GPT-3.5-Turbo: {str(e)}"
-        
-        # Include Ollama models if available
-        if self.ollama_available and self.ollama_models:
-            # Use the first available Ollama model for comparison
-            default_ollama_model = self.ollama_models[0]  # Use first model as default for comparison
-            try:
-                responses[f'ollama:{default_ollama_model}'] = self.ollama_model(prompt, default_ollama_model)
-            except Exception as e:
-                responses[f'ollama:{default_ollama_model}'] = f"Error getting response from Ollama {default_ollama_model}: {str(e)}"
-            
-        return responses
+    def get_available_resources(self) -> dict:
+        """Get both AI models and CLI tools available on the system"""
+        return {
+            "models": self.get_available_models(),
+            "cli_tools": self.available_cli_tools
+        }

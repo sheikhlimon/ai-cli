@@ -39,3 +39,7 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temp directories
+.qwen/
+test_ai_cli/
