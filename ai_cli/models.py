@@ -62,9 +62,10 @@ class AIModelManager:
             available.append("claude")
         if self.gemini_model:
             available.append("gemini")
-        # Add OpenAI models if available (for other OpenAI-compatible models)
+        # Add OpenAI models if available
         if self.openai_client:
-            available.append("openai")  # Generic name for OpenAI models
+            available.append("gpt-3.5-turbo")  # More specific naming
+            available.append("gpt-4")  # Could support multiple models
         return available
     
     def qwen(self, prompt: str) -> str:
@@ -119,22 +120,50 @@ class AIModelManager:
         except Exception as e:
             return f"Error calling Gemini: {str(e)}"
     
+    def openai_model(self, prompt: str, model: str = "gpt-3.5-turbo") -> str:
+        """Get response from OpenAI model (e.g., GPT)"""
+        if not self.openai_client:
+            return "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
+        
+        try:
+            response = self.openai_client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=500
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Error calling OpenAI model {model}: {str(e)}"
+    
     def compare_models(self, prompt: str) -> Dict[str, str]:
         """Get responses from all available models"""
         responses = {}
         
+        # Collect responses from all available models, handling errors gracefully
         if self.qwen_enabled:
-            responses['qwen'] = self.qwen(prompt)
+            try:
+                responses['qwen'] = self.qwen(prompt)
+            except Exception as e:
+                responses['qwen'] = f"Error getting response from Qwen: {str(e)}"
         
         if self.claude_client:
-            responses['claude'] = self.claude(prompt)
+            try:
+                responses['claude'] = self.claude(prompt)
+            except Exception as e:
+                responses['claude'] = f"Error getting response from Claude: {str(e)}"
         
         if self.gemini_model:
-            responses['gemini'] = self.gemini(prompt)
+            try:
+                responses['gemini'] = self.gemini(prompt)
+            except Exception as e:
+                responses['gemini'] = f"Error getting response from Gemini: {str(e)}"
             
-        # Include OpenAI models if available (but not duplicating Qwen)
-        if self.openai_client and not self.qwen_enabled:
-            # For now, just note that OpenAI models are available
-            responses['openai'] = "OpenAI models available (specific model not called in compare)"
+        # Include a default OpenAI model response if available and Qwen is not using OpenAI API
+        if self.openai_client:
+            try:
+                # Use a default OpenAI model for comparison if not using Qwen through OpenAI API
+                responses['gpt-3.5-turbo'] = self.openai_model(prompt, "gpt-3.5-turbo")
+            except Exception as e:
+                responses['gpt-3.5-turbo'] = f"Error getting response from GPT-3.5-Turbo: {str(e)}"
             
         return responses

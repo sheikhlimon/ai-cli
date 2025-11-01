@@ -2,7 +2,7 @@
 # A command-line interface for interacting with various AI models
 
 ## Features
-- Unified interface for multiple AI models (Qwen, Claude, Gemini, etc.)
+- Unified interface for multiple AI models (Qwen, Claude, Gemini, GPT, etc.)
 - Compare outputs from different models
 - Batch operations
 - Configuration management
@@ -46,6 +46,7 @@ ai-cli list
 ai-cli qwen "What is the meaning of life?"
 ai-cli claude "Explain quantum computing"
 ai-cli gemini "Write a poem about coding"
+ai-cli openai-model "What is machine learning?" --model gpt-3.5-turbo
 
 # Compare responses from all models
 ai-cli compare "How do I learn Python?"
@@ -56,6 +57,11 @@ ai-cli compare "How do I learn Python?"
 ```bash
 # View configuration status
 ai-cli config
+
+# Manage configuration
+ai-cli config --set openai=your_openai_key
+ai-cli config --list
+ai-cli config --reset
 
 # Save response to a file
 ai-cli qwen "Write a story" --output story.txt

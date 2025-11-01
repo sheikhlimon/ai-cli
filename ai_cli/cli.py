@@ -65,6 +65,21 @@ def gemini(prompt: str = typer.Argument(..., help="The prompt to send to Gemini 
         typer.echo(response)
 
 @app.command()
+def openai_model(prompt: str = typer.Argument(..., help="The prompt to send to OpenAI model (GPT)"), 
+                 model: str = typer.Option("gpt-3.5-turbo", "--model", "-m", help="OpenAI model to use"),
+                 output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the response")):
+    """Use OpenAI model (e.g., GPT) with the given prompt"""
+    manager = AIModelManager()
+    response = manager.openai_model(prompt, model)
+    
+    if output:
+        with open(output, 'w') as f:
+            f.write(response)
+        typer.echo(f"Response saved to {output}")
+    else:
+        typer.echo(response)
+
+@app.command()
 def compare(prompt: str = typer.Argument(..., help="The prompt to send to all models for comparison"), 
             output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the comparison")):
     """Compare responses from all available models"""
