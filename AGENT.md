@@ -2,31 +2,55 @@
 
 ## Project Overview
 
-AI CLI is a terminal-based multi-model AI manager that provides a unified interface for interacting with various AI models (cloud and local). The key feature is an intuitive TUI selector built from scratch.
+AI CLI is a unified interface for AI models and CLI tools with interactive selection. **Just run `ai-cli`** to launch the tool selector. Features dynamic tool discovery, simple configuration with short flags, and a custom TUI built from scratch.
 
 ## Architecture
 
 ### Core Modules
 
-1. **cli.py** - Main CLI interface
+1. **cli.py** - Main CLI interface (285 lines)
    - `select_option()` - Custom TUI selector using raw terminal mode
-   - `tools()` - Interactive model/tool selector command
-   - `config()` - Configuration management command
+   - `tools()` - Interactive model/tool selector command (default)
+   - `_run_chat_session()` - Helper for model chat sessions
+   - `_run_cli_tool()` - Helper for launching external CLI tools
+   - `config()` - Configuration with short flags (-s, -a, -r, -l, -t)
+   - `main()` - Callback for default command behavior
 
-2. **models.py** - AI model management
+2. **models.py** - AI model management (259 lines)
    - `AIModelManager` - Main class for model interactions
    - `chat()` - Unified interface for all models
-   - Auto-detection of Ollama models and CLI tools
+   - `_check_cli_availability()` - Dynamic PATH scanning for AI tools
+   - `_check_ollama_availability()` - Detect local Ollama
+   - `_get_ollama_models()` - List available Ollama models
    - Support for Claude, Gemini, Qwen APIs
 
-3. **config.py** - Configuration persistence
-   - Stores API keys in `~/.config/ai-cli/config.json`
+3. **config.py** - Configuration persistence (116 lines, reduced from 165)
+   - `_load_config()` - Helper to load JSON config
+   - `_save_config()` - Helper to save JSON config  
+   - `get_api_key()`, `set_api_key()` - API key management
+   - `get_custom_cli_tools()`, `add_custom_cli_tool()`, `remove_custom_cli_tool()` - Custom tool management
+   - Stores in `~/.ai-cli/config.json`
    - Environment variable fallback
 
 ## Key Design Decisions
 
-### Custom TUI Implementation
+### Default Command Behavior
+**Run `ai-cli` without subcommands to launch tool selector**
+- Uses `@app.callback(invoke_without_command=True)`
+- Checks `ctx.invoked_subcommand is None` before invoking `tools()`
+- Set `no_args_is_help=False` to allow callback execution
+- Provides seamless UX - user doesn't need to remember `tools` subcommand
 
+### Dynamic CLI Tool Discovery
+**No hardcoded tool lists - scans PATH automatically**
+- Scans all directories in `PATH` environment variable
+- Pattern matching: exact names (ollama, droid, gemini, claude, amp, qwen)
+- Prefix matching: `ai-`, `gpt-`, `chatgpt-`, `llm-`, `gemini-`, `claude-`
+- Suffix matching: `-cli`, `-ai`, `-gpt`, `-llm`
+- Exclusion list to filter system tools (node, npm, python, etc.)
+- Custom tools can be added via `ai-cli config -a <tool>`
+
+### Custom TUI Implementation
 **Why not use `pick` or other libraries?**
 - Wanted full control over rendering and behavior
 - Eliminated 300+ lines of fallback code
@@ -69,6 +93,33 @@ def select_option(options: List[Tuple[str, str]], title: str) -> Optional[Tuple[
 - Navigation: Arrow keys (↑/↓), vim keys (j/k), Enter to select, q/ESC to quit
 - Handles: Ctrl+C gracefully
 
+### _run_chat_session()
+```python
+def _run_chat_session(manager: AIModelManager, model_name: str)
+```
+- Runs interactive chat loop with AI model
+- Shows 💬 emoji and exit instructions
+- Handles 'exit', 'quit', 'q' commands
+- Graceful KeyboardInterrupt handling
+
+### _run_cli_tool()
+```python
+def _run_cli_tool(tool_name: str)
+```
+- Launches external CLI tool via subprocess
+- Better error messages with ❌ emoji
+- Suggests `ai-cli config -a` for missing tools
+- Handles FileNotFoundError, KeyboardInterrupt gracefully
+
+### _load_config() / _save_config()
+```python
+def _load_config() -> Dict  # Returns empty dict if file doesn't exist
+def _save_config(config: Dict) -> bool  # Returns success status
+```
+- Eliminates duplicate JSON loading/saving code
+- Specific exception handling (json.JSONDecodeError, IOError)
+- Used by all config methods for consistency
+
 ### ANSI Escape Sequences Used
 ```python
 "\033[2J\033[H"      # Clear screen and move to home
@@ -104,7 +155,10 @@ venv/bin/ai-cli tools
 - **Concise**: No verbose comments, code should be self-documenting
 - **Minimal**: Only necessary functionality, no feature creep
 - **Clean**: Consistent formatting, clear variable names
-- **Error messages**: Short and actionable (e.g., "Error: message" not "An error occurred: message")
+- **Error messages**: Short, actionable, with emojis (❌ for errors, ✓ for success, 💬 for chat, 👋 for goodbye)
+- **Helper functions**: Extract logic into `_private_helpers()` for better organization
+- **Short flags**: Always provide single-letter aliases (-s, -a, -r, -l, -t)
+- **Default behavior**: Make common actions the default (e.g., `ai-cli` runs tool selector)
 
 ## Dependencies
 
