@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from typing import Optional
 from .models import AIModelManager
+from .config import ConfigManager
 
 load_dotenv()
 
@@ -82,26 +83,53 @@ def compare(prompt: str = typer.Argument(..., help="The prompt to send to all mo
         typer.echo(f"Comparison saved to {output}")
 
 @app.command()
-def config(set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set a configuration value (e.g., api-key)")):
+def config(
+    set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set an API key in the format 'provider=key'"),
+    list_status: bool = typer.Option(False, "--list", "-l", help="List configuration status"),
+    reset: bool = typer.Option(False, "--reset", help="Reset all configuration")
+):
     """Manage configuration"""
+    config_manager = ConfigManager()
+    
+    if reset:
+        typer.confirm("Are you sure you want to reset all configuration?", abort=True)
+        config_file = config_manager.config_dir / "config.json"
+        if config_file.exists():
+            config_file.unlink()
+            typer.echo("Configuration reset successfully.")
+        else:
+            typer.echo("No configuration file found to reset.")
+        return
+    
     if set_key:
-        typer.echo(f"Setting {set_key}...")
-        # Implementation for setting config values will go here
-    else:
-        # Show current configuration status
-        manager = AIModelManager()
-        models = manager.get_available_models()
-        typer.echo("Current configuration status:")
-        typer.echo(f"Available models: {models if models else 'None configured'}")
+        if '=' not in set_key:
+            typer.echo("Please provide the key in the format 'provider=key'")
+            raise typer.Exit(code=1)
         
-        # Check which API keys are set
-        api_keys_status = {
-            "OpenAI": "SET" if os.getenv("OPENAI_API_KEY") else "NOT SET",
-            "Claude": "SET" if os.getenv("CLAUDE_API_KEY") else "NOT SET", 
-            "Gemini": "SET" if os.getenv("GEMINI_API_KEY") else "NOT SET"
-        }
-        for service, status in api_keys_status.items():
-            typer.echo(f"  {service} API key: {status}")
+        provider, key = set_key.split('=', 1)
+        provider = provider.strip().lower()
+        key = key.strip()
+        
+        if provider not in ['openai', 'claude', 'gemini', 'qwen']:
+            typer.echo(f"Unsupported provider: {provider}. Supported: openai, claude, gemini, qwen")
+            raise typer.Exit(code=1)
+        
+        if config_manager.set_api_key(provider, key):
+            typer.echo(f"{provider.upper()} API key set successfully!")
+        else:
+            typer.echo(f"Failed to set {provider.upper()} API key.")
+        return
+    
+    if list_status or not set_key:
+        # Show current configuration status
+        status = config_manager.get_providers_status()
+        typer.echo("Current configuration status:")
+        
+        for provider, info in status.items():
+            status_text = "SET" if info['configured'] else "NOT SET"
+            typer.echo(f"  {provider.upper()}: {status_text}")
+            if info['configured']:
+                typer.echo(f"    Key preview: {info['key_preview']}")
 
 if __name__ == "__main__":
     app()

@@ -19,22 +19,26 @@ class AIModelManager:
     
     def _setup_apis(self):
         """Set up API clients for different AI models"""
+        # Get API keys from environment or config
+        from .config import ConfigManager
+        config_manager = ConfigManager()
+        
         # OpenAI (for models that use OpenAI API format)
-        openai_api_key = os.getenv("OPENAI_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY") or config_manager.get_api_key("openai")
         if openai_api_key:
             self.openai_client = OpenAI(api_key=openai_api_key)
         else:
             self.openai_client = None
         
         # Anthropic (for Claude)
-        claude_api_key = os.getenv("CLAUDE_API_KEY")
+        claude_api_key = os.getenv("CLAUDE_API_KEY") or config_manager.get_api_key("claude")
         if claude_api_key:
             self.claude_client = anthropic.Anthropic(api_key=claude_api_key)
         else:
             self.claude_client = None
             
         # Google (for Gemini)
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        gemini_api_key = os.getenv("GEMINI_API_KEY") or config_manager.get_api_key("gemini")
         if gemini_api_key:
             genai.configure(api_key=gemini_api_key)
             self.gemini_model = genai.GenerativeModel('gemini-pro')
@@ -42,7 +46,7 @@ class AIModelManager:
             self.gemini_model = None
             
         # Qwen/Tongyi (using dashscope)
-        qwen_api_key = os.getenv("QWEN_API_KEY")
+        qwen_api_key = os.getenv("QWEN_API_KEY") or config_manager.get_api_key("qwen")
         if qwen_api_key and DASHSCOPE_AVAILABLE:
             dashscope.api_key = qwen_api_key
             self.qwen_enabled = True
@@ -73,14 +77,14 @@ class AIModelManager:
         
         try:
             import dashscope
-            response = dashscope.Generation.call(
+            response = dashscope.ChatCompletion.call(
                 model='qwen-max',
-                prompt=prompt,
-                result_format='message'  # Use message format for better compatibility
+                messages=[
+                    {'role': 'user', 'content': prompt}
+                ]
             )
             
             if response.status_code == 200:
-                # Extract the response text
                 return response.output.choices[0].message.content if response.output.choices else "No response from Qwen"
             else:
                 return f"Error calling Qwen: {response.code} - {response.message}"
