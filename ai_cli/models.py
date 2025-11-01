@@ -1,0 +1,107 @@
+"""AI model management module"""
+import os
+from typing import Dict, Optional
+import openai
+from openai import OpenAI
+import anthropic
+import google.generativeai as genai
+
+class AIModelManager:
+    def __init__(self):
+        # Initialize API clients
+        self._setup_apis()
+    
+    def _setup_apis(self):
+        """Set up API clients for different AI models"""
+        # OpenAI (for Qwen if available via OpenAI API)
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if openai_api_key:
+            self.openai_client = OpenAI(api_key=openai_api_key)
+        else:
+            self.openai_client = None
+        
+        # Anthropic (for Claude)
+        claude_api_key = os.getenv("CLAUDE_API_KEY")
+        if claude_api_key:
+            self.claude_client = anthropic.Anthropic(api_key=claude_api_key)
+        else:
+            self.claude_client = None
+            
+        # Google (for Gemini)
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if gemini_api_key:
+            genai.configure(api_key=gemini_api_key)
+            self.gemini_model = genai.GenerativeModel('gemini-pro')
+        else:
+            self.gemini_model = None
+    
+    def get_available_models(self) -> list:
+        """Get list of available models based on configured API keys"""
+        available = []
+        if self.openai_client:
+            available.append("qwen")
+        if self.claude_client:
+            available.append("claude")
+        if self.gemini_model:
+            available.append("gemini")
+        return available
+    
+    def qwen(self, prompt: str) -> str:
+        """Get response from Qwen model"""
+        if not self.openai_client:
+            return "Qwen API key not configured. Please set OPENAI_API_KEY environment variable."
+        
+        try:
+            # Note: Qwen typically requires a different client, but for now we'll use OpenAI API format
+            # This is a placeholder - actual Qwen integration would need a specific client
+            response = self.openai_client.chat.completions.create(
+                model="qwen",  # This would be the actual Qwen model identifier
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=500
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Error calling Qwen: {str(e)}"
+    
+    def claude(self, prompt: str) -> str:
+        """Get response from Claude model"""
+        if not self.claude_client:
+            return "Claude API key not configured. Please set CLAUDE_API_KEY environment variable."
+        
+        try:
+            message = self.claude_client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=500,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return message.content[0].text
+        except Exception as e:
+            return f"Error calling Claude: {str(e)}"
+    
+    def gemini(self, prompt: str) -> str:
+        """Get response from Gemini model"""
+        if not self.gemini_model:
+            return "Gemini API key not configured. Please set GEMINI_API_KEY environment variable."
+        
+        try:
+            response = self.gemini_model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"Error calling Gemini: {str(e)}"
+    
+    def compare_models(self, prompt: str) -> Dict[str, str]:
+        """Get responses from all available models"""
+        responses = {}
+        
+        if self.openai_client:
+            responses['qwen'] = self.qwen(prompt)
+        
+        if self.claude_client:
+            responses['claude'] = self.claude(prompt)
+        
+        if self.gemini_model:
+            responses['gemini'] = self.gemini(prompt)
+            
+        return responses
