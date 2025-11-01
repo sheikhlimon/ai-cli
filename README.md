@@ -31,6 +31,7 @@ Create a `.env` file in your home directory or project root with your API keys:
 OPENAI_API_KEY=your_openai_api_key
 CLAUDE_API_KEY=your_claude_api_key
 GEMINI_API_KEY=your_gemini_api_key
+QWEN_API_KEY=your_qwen_api_key
 ```
 
 ## Usage
@@ -55,6 +56,10 @@ ai-cli compare "How do I learn Python?"
 ```bash
 # View configuration status
 ai-cli config
+
+# Save response to a file
+ai-cli qwen "Write a story" --output story.txt
+ai-cli compare "Explain AI" -o comparison.txt
 ```
 
 ## Available Models
@@ -62,6 +67,7 @@ ai-cli config
 - Qwen (via Tongyi API)
 - Claude (via Anthropic API)
 - Gemini (via Google AI API)
+- GPT models (via OpenAI API)
 
 ## Contributing
 

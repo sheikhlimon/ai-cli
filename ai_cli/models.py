@@ -5,6 +5,12 @@ import openai
 from openai import OpenAI
 import anthropic
 import google.generativeai as genai
+# Import for Qwen if available
+try:
+    import dashscope
+    DASHSCOPE_AVAILABLE = True
+except ImportError:
+    DASHSCOPE_AVAILABLE = False
 
 class AIModelManager:
     def __init__(self):
@@ -13,7 +19,7 @@ class AIModelManager:
     
     def _setup_apis(self):
         """Set up API clients for different AI models"""
-        # OpenAI (for Qwen if available via OpenAI API)
+        # OpenAI (for models that use OpenAI API format)
         openai_api_key = os.getenv("OPENAI_API_KEY")
         if openai_api_key:
             self.openai_client = OpenAI(api_key=openai_api_key)
@@ -34,32 +40,50 @@ class AIModelManager:
             self.gemini_model = genai.GenerativeModel('gemini-pro')
         else:
             self.gemini_model = None
+            
+        # Qwen/Tongyi (using dashscope)
+        qwen_api_key = os.getenv("QWEN_API_KEY")
+        if qwen_api_key and DASHSCOPE_AVAILABLE:
+            dashscope.api_key = qwen_api_key
+            self.qwen_enabled = True
+        else:
+            self.qwen_enabled = False
     
     def get_available_models(self) -> list:
         """Get list of available models based on configured API keys"""
         available = []
-        if self.openai_client:
+        if self.qwen_enabled:
             available.append("qwen")
         if self.claude_client:
             available.append("claude")
         if self.gemini_model:
             available.append("gemini")
+        # Add OpenAI models if available (for other OpenAI-compatible models)
+        if self.openai_client:
+            available.append("openai")  # Generic name for OpenAI models
         return available
     
     def qwen(self, prompt: str) -> str:
         """Get response from Qwen model"""
-        if not self.openai_client:
-            return "Qwen API key not configured. Please set OPENAI_API_KEY environment variable."
+        if not self.qwen_enabled:
+            if not DASHSCOPE_AVAILABLE:
+                return "Qwen integration requires the dashscope package. Install it with: pip install dashscope"
+            else:
+                return "Qwen API key not configured. Please set QWEN_API_KEY environment variable."
         
         try:
-            # Note: Qwen typically requires a different client, but for now we'll use OpenAI API format
-            # This is a placeholder - actual Qwen integration would need a specific client
-            response = self.openai_client.chat.completions.create(
-                model="qwen",  # This would be the actual Qwen model identifier
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=500
+            import dashscope
+            response = dashscope.Generation.call(
+                model='qwen-max',
+                prompt=prompt,
+                result_format='message'  # Use message format for better compatibility
             )
-            return response.choices[0].message.content
+            
+            if response.status_code == 200:
+                # Extract the response text
+                return response.output.choices[0].message.content if response.output.choices else "No response from Qwen"
+            else:
+                return f"Error calling Qwen: {response.code} - {response.message}"
         except Exception as e:
             return f"Error calling Qwen: {str(e)}"
     
@@ -95,7 +119,7 @@ class AIModelManager:
         """Get responses from all available models"""
         responses = {}
         
-        if self.openai_client:
+        if self.qwen_enabled:
             responses['qwen'] = self.qwen(prompt)
         
         if self.claude_client:
@@ -103,5 +127,10 @@ class AIModelManager:
         
         if self.gemini_model:
             responses['gemini'] = self.gemini(prompt)
+            
+        # Include OpenAI models if available (but not duplicating Qwen)
+        if self.openai_client and not self.qwen_enabled:
+            # For now, just note that OpenAI models are available
+            responses['openai'] = "OpenAI models available (specific model not called in compare)"
             
         return responses
