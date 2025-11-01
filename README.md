@@ -2,10 +2,12 @@
 # A command-line interface for interacting with various AI models
 
 ## Features
-- Unified interface for multiple AI models (Qwen, Claude, Gemini, GPT, etc.)
+- Unified interface for multiple AI models (Qwen, Claude, Gemini, GPT, Ollama, etc.)
 - Compare outputs from different models
+- Interactive chat sessions with individual models
 - Batch operations
 - Configuration management
+- Support for both cloud and local (Ollama) models
 - Usage tracking
 
 ## Installation
@@ -23,6 +25,11 @@
    pip install -e .
    ```
 
+## Prerequisites
+
+- For cloud models (Qwen, Claude, Gemini, OpenAI): API keys
+- For local models: Install and run [Ollama](https://ollama.ai/) with desired models
+
 ## Configuration
 
 Create a `.env` file in your home directory or project root with your API keys:
@@ -39,7 +46,7 @@ QWEN_API_KEY=your_qwen_api_key
 ### Basic Commands
 
 ```bash
-# List available models
+# List available models (both cloud and local)
 ai-cli list
 
 # Query a specific model
@@ -47,9 +54,21 @@ ai-cli qwen "What is the meaning of life?"
 ai-cli claude "Explain quantum computing"
 ai-cli gemini "Write a poem about coding"
 ai-cli openai-model "What is machine learning?" --model gpt-3.5-turbo
+ai-cli ollama "What is AI?" --model llama2
 
 # Compare responses from all models
 ai-cli compare "How do I learn Python?"
+```
+
+### Interactive Mode
+
+```bash
+# Start an interactive chat session with a model
+ai-cli interactive qwen
+ai-cli interactive claude
+ai-cli interactive gemini
+ai-cli interactive gpt-3.5-turbo
+ai-cli interactive ollama:llama2
 ```
 
 ### Advanced Features
@@ -70,10 +89,14 @@ ai-cli compare "Explain AI" -o comparison.txt
 
 ## Available Models
 
+### Cloud Models
 - Qwen (via Tongyi API)
 - Claude (via Anthropic API)
 - Gemini (via Google AI API)
 - GPT models (via OpenAI API)
+
+### Local Models
+- Ollama models (any model installed with Ollama)
 
 ## Contributing
 

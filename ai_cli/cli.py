@@ -15,12 +15,27 @@ def list():
     """List all available AI models"""
     manager = AIModelManager()
     models = manager.get_available_models()
+    
+    # Separate cloud and local models for better display
+    cloud_models = [m for m in models if not m.startswith("ollama:")]
+    local_models = [m for m in models if m.startswith("ollama:")]
+    
     if models:
         typer.echo("Available AI models:")
-        for model in models:
-            typer.echo(f"  - {model}")
+        
+        if cloud_models:
+            typer.echo("  Cloud models:")
+            for model in cloud_models:
+                typer.echo(f"    - {model}")
+        
+        if local_models:
+            typer.echo("  Local Ollama models:")
+            for model in local_models:
+                typer.echo(f"    - {model}")
     else:
-        typer.echo("No AI models are currently configured. Please check your API keys.")
+        typer.echo("No AI models are currently configured.")
+        typer.echo("  - Cloud models: Please set up your API keys using 'ai-cli config'")
+        typer.echo("  - Local models: Please install and start Ollama server with some models")
 
 @app.command()
 def qwen(prompt: str = typer.Argument(..., help="The prompt to send to Qwen model"), 
@@ -78,6 +93,71 @@ def openai_model(prompt: str = typer.Argument(..., help="The prompt to send to O
         typer.echo(f"Response saved to {output}")
     else:
         typer.echo(response)
+
+@app.command()
+def ollama(prompt: str = typer.Argument(..., help="The prompt to send to Ollama model"), 
+           model: str = typer.Option("llama2", "--model", "-m", help="Ollama model to use"),
+           output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file to save the response")):
+    """Use Ollama model with the given prompt"""
+    manager = AIModelManager()
+    response = manager.ollama_model(prompt, model)
+    
+    if output:
+        with open(output, 'w') as f:
+            f.write(response)
+        typer.echo(f"Response saved to {output}")
+    else:
+        typer.echo(response)
+
+@app.command()
+def interactive(model: str = typer.Argument(..., help="Model to use interactively (e.g., qwen, claude, gemini, gpt-3.5-turbo, ollama:llama2)")):
+    """Start an interactive session with a specific model"""
+    import sys
+    
+    manager = AIModelManager()
+    available_models = manager.get_available_models()
+    
+    if model not in available_models:
+        typer.echo(f"Model '{model}' is not available. Available models: {', '.join(available_models) if available_models else 'None'}")
+        raise typer.Exit(code=1)
+    
+    typer.echo(f"Starting interactive session with {model}. Type 'exit' or 'quit' to end.")
+    typer.echo("="*50)
+    
+    # Handle different model types
+    while True:
+        try:
+            user_input = typer.prompt("You", prompt_suffix=": ")
+            
+            if user_input.lower() in ['exit', 'quit', 'q']:
+                break
+                
+            # Call the appropriate model method based on model type
+            if model.startswith("ollama:"):
+                ollama_model_name = model[7:]  # Remove "ollama:" prefix
+                response = manager.ollama_model(user_input, ollama_model_name)
+            elif model == "qwen":
+                response = manager.qwen(user_input)
+            elif model == "claude":
+                response = manager.claude(user_input)
+            elif model == "gemini":
+                response = manager.gemini(user_input)
+            elif model in ["gpt-3.5-turbo", "gpt-4"]:
+                response = manager.openai_model(user_input, model)
+            else:
+                response = f"Unknown model type: {model}"
+            
+            typer.echo(f"{model.capitalize()}: {response}")
+            typer.echo()
+            
+        except KeyboardInterrupt:
+            typer.echo("\nSession interrupted. Goodbye!")
+            break
+        except Exception as e:
+            typer.echo(f"Error during interaction: {str(e)}")
+            break
+    
+    typer.echo("Interactive session ended.")
 
 @app.command()
 def compare(prompt: str = typer.Argument(..., help="The prompt to send to all models for comparison"), 

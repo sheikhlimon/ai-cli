@@ -5,6 +5,8 @@ import openai
 from openai import OpenAI
 import anthropic
 import google.generativeai as genai
+import subprocess
+import json
 # Import for Qwen if available
 try:
     import dashscope
@@ -52,6 +54,44 @@ class AIModelManager:
             self.qwen_enabled = True
         else:
             self.qwen_enabled = False
+            
+        # Ollama local models
+        self.ollama_available = self._check_ollama_availability()
+        if self.ollama_available:
+            self.ollama_models = self._get_ollama_models()
+        else:
+            self.ollama_models = []
+
+    def _check_ollama_availability(self) -> bool:
+        """Check if Ollama is available on the system"""
+        try:
+            result = subprocess.run(['ollama', 'list'], capture_output=True, text=True, timeout=5)
+            return result.returncode == 0
+        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
+            # Ollama is not installed or not running
+            return False
+
+    def _get_ollama_models(self) -> list:
+        """Get list of locally available Ollama models"""
+        if not self.ollama_available:
+            return []
+        
+        try:
+            result = subprocess.run(['ollama', 'list'], capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')
+                # Skip header line and parse model names
+                models = []
+                for line in lines[1:]:  # Skip header
+                    if line.strip():
+                        # Extract model name from ollama list output format
+                        model_name = line.split()[0]  # First column is model name
+                        if model_name:
+                            models.append(model_name)
+                return models
+            return []
+        except Exception:
+            return []
     
     def get_available_models(self) -> list:
         """Get list of available models based on configured API keys"""
@@ -120,6 +160,28 @@ class AIModelManager:
         except Exception as e:
             return f"Error calling Gemini: {str(e)}"
     
+    def ollama_model(self, prompt: str, model: str = "llama2") -> str:
+        """Get response from a local Ollama model"""
+        if not self.ollama_available:
+            return "Ollama is not available. Please install and start Ollama server."
+        
+        if model not in self.ollama_models:
+            return f"Model '{model}' not available. Available models: {', '.join(self.ollama_models) if self.ollama_models else 'None'}"
+        
+        try:
+            result = subprocess.run([
+                'ollama', 'run', model
+            ], input=prompt, text=True, capture_output=True, timeout=60)
+            
+            if result.returncode == 0:
+                return result.stdout.strip()
+            else:
+                return f"Error calling Ollama model {model}: {result.stderr.strip()}"
+        except subprocess.TimeoutExpired:
+            return f"Timeout calling Ollama model {model}: Request took too long"
+        except Exception as e:
+            return f"Error calling Ollama model {model}: {str(e)}"
+    
     def openai_model(self, prompt: str, model: str = "gpt-3.5-turbo") -> str:
         """Get response from OpenAI model (e.g., GPT)"""
         if not self.openai_client:
@@ -134,6 +196,24 @@ class AIModelManager:
             return response.choices[0].message.content
         except Exception as e:
             return f"Error calling OpenAI model {model}: {str(e)}"
+    
+    def get_available_models(self) -> list:
+        """Get list of available models based on configured API keys and local models"""
+        available = []
+        if self.qwen_enabled:
+            available.append("qwen")
+        if self.claude_client:
+            available.append("claude")
+        if self.gemini_model:
+            available.append("gemini")
+        # Add OpenAI models if available
+        if self.openai_client:
+            available.append("gpt-3.5-turbo")  # More specific naming
+            available.append("gpt-4")  # Could support multiple models
+        # Add Ollama models if available
+        if self.ollama_available and self.ollama_models:
+            available.extend([f"ollama:{model}" for model in self.ollama_models])
+        return available
     
     def compare_models(self, prompt: str) -> Dict[str, str]:
         """Get responses from all available models"""
@@ -158,12 +238,20 @@ class AIModelManager:
             except Exception as e:
                 responses['gemini'] = f"Error getting response from Gemini: {str(e)}"
             
-        # Include a default OpenAI model response if available and Qwen is not using OpenAI API
+        # Include a default OpenAI model response if available
         if self.openai_client:
             try:
-                # Use a default OpenAI model for comparison if not using Qwen through OpenAI API
                 responses['gpt-3.5-turbo'] = self.openai_model(prompt, "gpt-3.5-turbo")
             except Exception as e:
                 responses['gpt-3.5-turbo'] = f"Error getting response from GPT-3.5-Turbo: {str(e)}"
+        
+        # Include Ollama models if available
+        if self.ollama_available and self.ollama_models:
+            # Use the first available Ollama model for comparison
+            default_ollama_model = self.ollama_models[0]  # Use first model as default for comparison
+            try:
+                responses[f'ollama:{default_ollama_model}'] = self.ollama_model(prompt, default_ollama_model)
+            except Exception as e:
+                responses[f'ollama:{default_ollama_model}'] = f"Error getting response from Ollama {default_ollama_model}: {str(e)}"
             
         return responses
