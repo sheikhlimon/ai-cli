@@ -57,6 +57,66 @@ venv/bin/ai-cli tools
 # No need to reinstall because we used -e (editable mode)
 ```
 
+## Running Tests
+
+The project includes a comprehensive test suite with pytest.
+
+### Basic Testing
+
+```bash
+# Run all tests
+venv/bin/python -m pytest
+
+# Run with verbose output
+venv/bin/python -m pytest -v
+
+# Run specific test file
+venv/bin/python -m pytest tests/test_cli.py
+```
+
+### Test Markers
+
+Tests are organized by markers for selective execution:
+
+```bash
+# Run only unit tests (fast)
+venv/bin/python -m pytest -m unit
+
+# Run only integration tests
+venv/bin/python -m pytest -m integration
+
+# Run only slow tests
+venv/bin/python -m pytest -m slow
+```
+
+### Coverage Reports
+
+```bash
+# Install coverage tool (first time only)
+venv/bin/pip install pytest-cov
+
+# Run tests with coverage
+venv/bin/python -m pytest --cov=ai_cli
+
+# Generate HTML coverage report
+venv/bin/python -m pytest --cov=ai_cli --cov-report=html
+# Open htmlcov/index.html in browser
+```
+
+### Quick Test Commands
+
+```bash
+# Fast check (unit tests only)
+venv/bin/python -m pytest -m unit -v
+
+# Full test suite with coverage
+venv/bin/python -m pytest --cov=ai_cli -v
+
+# Watch mode (requires pytest-watch)
+venv/bin/pip install pytest-watch
+venv/bin/ptw
+```
+
 ## Sharing with Others
 
 ### For Users (Simple Installation)

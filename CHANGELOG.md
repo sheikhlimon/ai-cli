@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] - 2024-11-01
+## [Unreleased] - 2025-11-01
 
 ### Added
 - Custom TUI selector with arrow key and vim motion (j/k) navigation

@@ -25,7 +25,7 @@ ai-cli tools
 
 ```bash
 # Clone and setup
-git clone <repository-url>
+git clone https://github.com/sheikhlimon/ai-cli.git
 cd ai-cli
 python3 -m venv venv
 venv/bin/pip install -e .
