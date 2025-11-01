@@ -181,9 +181,11 @@ def tools():
 def config(
     set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set API key: provider=key"),
     list_status: bool = typer.Option(False, "--list", "-l", help="List config status"),
-    reset: bool = typer.Option(False, "--reset", help="Reset config")
+    reset: bool = typer.Option(False, "--reset", help="Reset config"),
+    add_tool: Optional[str] = typer.Option(None, "--add-tool", help="Add custom CLI tool"),
+    list_tools: bool = typer.Option(False, "--list-tools", help="List custom CLI tools")
 ):
-    """Manage API keys configuration"""
+    """Manage API keys and CLI tools configuration"""
     config_manager = ConfigManager()
     
     if reset:
@@ -215,7 +217,37 @@ def config(
             typer.echo(f"Failed to set {provider.upper()} key.")
         return
     
-    if list_status or not set_key:
+    if add_tool:
+        import shutil
+        if not shutil.which(add_tool):
+            typer.echo(f"Warning: '{add_tool}' not found in PATH")
+        
+        if config_manager.add_custom_cli_tool(add_tool):
+            typer.echo(f"Added '{add_tool}' to custom CLI tools")
+        else:
+            typer.echo(f"Failed to add '{add_tool}'")
+        return
+    
+    if list_tools:
+        custom = config_manager.get_custom_cli_tools()
+        excluded = config_manager.get_excluded_cli_tools()
+        
+        typer.echo("Custom CLI Tools:")
+        if custom:
+            for tool in custom:
+                typer.echo(f"  + {tool}")
+        else:
+            typer.echo("  (none)")
+        
+        typer.echo("\nExcluded CLI Tools:")
+        if excluded:
+            for tool in excluded:
+                typer.echo(f"  - {tool}")
+        else:
+            typer.echo("  (none)")
+        return
+    
+    if list_status or not (set_key or add_tool):
         status = config_manager.get_providers_status()
         typer.echo("Configuration:")
         

@@ -88,23 +88,66 @@ class AIModelManager:
             return []
 
     def _check_cli_availability(self) -> list:
-        """Check for available AI CLI tools on the system"""
+        """Auto-detect AI CLI tools on the system"""
         import shutil
+        from pathlib import Path
+        from .config import ConfigManager
         
+        config_manager = ConfigManager()
         available_clis = []
+        seen = set()
         
-        # Check for various AI CLI tools using only which to avoid system command issues
-        # Common AI CLIs that users might have installed
-        cli_tools = [
-            'ollama', 'qwen', 'amp', 'gemini', 'claude', 'droid',  # Common AI CLIs
-            'gpt', 'open-interpreter', 'jan', 'continuedev', 'phidata'  # Other possible tools
-        ]
+        # Exclude common system tools
+        excluded = set(config_manager.get_excluded_cli_tools())
+        excluded.update(['ai-cli', 'node', 'npm', 'npx', 'python', 'python3', 'pip', 'bash', 'sh', 'corepack', 'yarn', 'pnpm'])
         
-        for tool in cli_tools:
-            if shutil.which(tool):
+        # Scan all PATH directories
+        path_dirs = os.environ.get('PATH', '').split(os.pathsep)
+        
+        for path_dir in path_dirs:
+            try:
+                path_obj = Path(path_dir)
+                if not path_obj.exists() or not path_obj.is_dir():
+                    continue
+                
+                for item in path_obj.iterdir():
+                    if not item.is_file() or item.name in excluded or item.name in seen:
+                        continue
+                    
+                    # Check if executable
+                    if not os.access(str(item), os.X_OK):
+                        continue
+                    
+                    name = item.name
+                    name_lower = name.lower()
+                    
+                    # Match AI tool patterns
+                    # 1. Exact matches for specific AI tools
+                    if name_lower in ['ollama', 'aider', 'droid', 'gemini', 'claude', 'qwen', 'anthropic', 
+                                      'copilot', 'cody', 'cursor', 'fabric', 'ai', 'llm', 'gpt', 
+                                      'chat', 'aichat', 'sgpt', 'chatgpt', 'amp']:
+                        available_clis.append(name)
+                        seen.add(name)
+                    # 2. Has AI-related prefixes
+                    elif any(name_lower.startswith(x) for x in ['ai-', 'chatgpt-', 'gpt-', 'llm-', 'gemini-', 'claude-', 'qwen-', 'openai-']):
+                        available_clis.append(name)
+                        seen.add(name)
+                    # 3. Has AI-related suffixes (but not system tools)
+                    elif any(name_lower.endswith(x) for x in ['-ai', '-gpt', '-llm']) and not any(y in name_lower for y in ['android', 'deploy', 'hypr', 'gnu', 'omarchy']):
+                        available_clis.append(name)
+                        seen.add(name)
+                        
+            except (PermissionError, OSError):
+                continue
+        
+        # Add custom CLI tools from config
+        custom_tools = config_manager.get_custom_cli_tools()
+        for tool in custom_tools:
+            if tool not in excluded and tool not in seen and shutil.which(tool):
                 available_clis.append(tool)
+                seen.add(tool)
         
-        return available_clis
+        return sorted(available_clis)
     
     def get_available_models(self) -> list:
         """Get list of available models based on configured API keys and local models"""

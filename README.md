@@ -7,7 +7,9 @@ Multi-model AI manager with interactive TUI selector.
 - Interactive TUI with arrow keys/vim motions (j/k)
 - Unified interface for cloud models (Qwen, Claude, Gemini)
 - Auto-detects local Ollama models
+- Dynamic CLI tool discovery (detects installed AI tools like droid, gemini, claude, amp, etc.)
 - Persistent API key configuration
+- Custom CLI tool management
 
 ## Installation
 
@@ -39,7 +41,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
 ## Quick Start
 
 ```bash
-# Launch interactive selector
+# Launch interactive selector (shows all available AI models and CLI tools)
 ai-cli tools
 
 # Configure API keys
@@ -47,8 +49,12 @@ ai-cli config --set claude=sk-...
 ai-cli config --set gemini=...
 ai-cli config --set qwen=...
 
+# Add custom CLI tools (if not auto-detected)
+ai-cli config --add-tool my-ai-tool
+
 # View config
 ai-cli config --list
+ai-cli config --list-tools
 ```
 
 ## Configuration

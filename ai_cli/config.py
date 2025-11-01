@@ -2,7 +2,7 @@
 import os
 import typer
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 class ConfigManager:
     def __init__(self):
@@ -91,3 +91,75 @@ class ConfigManager:
             return True
         except:
             return False
+    
+    def get_custom_cli_tools(self) -> List[str]:
+        """Get list of custom CLI tools from config"""
+        if not self.config_file.exists():
+            return []
+        
+        import json
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            return config.get("custom_cli_tools", [])
+        except:
+            return []
+    
+    def get_excluded_cli_tools(self) -> List[str]:
+        """Get list of excluded CLI tools from config"""
+        if not self.config_file.exists():
+            return []
+        
+        import json
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            return config.get("excluded_cli_tools", [])
+        except:
+            return []
+    
+    def add_custom_cli_tool(self, tool: str) -> bool:
+        """Add a custom CLI tool to config"""
+        config = {}
+        if self.config_file.exists():
+            import json
+            try:
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+            except:
+                config = {}
+        
+        if "custom_cli_tools" not in config:
+            config["custom_cli_tools"] = []
+        
+        if tool not in config["custom_cli_tools"]:
+            config["custom_cli_tools"].append(tool)
+        
+        try:
+            import json
+            with open(self.config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+            return True
+        except:
+            return False
+    
+    def remove_custom_cli_tool(self, tool: str) -> bool:
+        """Remove a custom CLI tool from config"""
+        if not self.config_file.exists():
+            return False
+        
+        import json
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            
+            if "custom_cli_tools" in config and tool in config["custom_cli_tools"]:
+                config["custom_cli_tools"].remove(tool)
+                
+                with open(self.config_file, 'w') as f:
+                    json.dump(config, f, indent=2)
+                return True
+        except:
+            pass
+        
+        return False
