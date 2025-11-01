@@ -10,7 +10,7 @@ def test_help_command():
     """Test the help command"""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "A CLI tool for managing multiple AI models" in result.stdout
+    assert "Unified interface for AI models and CLI tools" in result.stdout
     assert "tools" in result.stdout
     assert "config" in result.stdout
 
@@ -33,7 +33,7 @@ def test_tools_command_help():
     """Test the tools command help"""
     result = runner.invoke(app, ["tools", "--help"])
     assert result.exit_code == 0
-    assert "Interactive selection interface" in result.stdout
+    assert "Launch interactive AI tool selector" in result.stdout
 
 @pytest.mark.unit
 def test_invalid_command():

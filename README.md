@@ -41,20 +41,21 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
 ## Quick Start
 
 ```bash
-# Launch interactive selector (shows all available AI models and CLI tools)
+# Launch interactive selector
 ai-cli tools
 
 # Configure API keys
-ai-cli config --set claude=sk-...
-ai-cli config --set gemini=...
-ai-cli config --set qwen=...
+ai-cli config -s claude=sk-...
+ai-cli config -s gemini=...
+ai-cli config -s qwen=...
 
-# Add custom CLI tools (if not auto-detected)
-ai-cli config --add-tool my-ai-tool
+# Manage custom tools
+ai-cli config -a my-tool      # Add
+ai-cli config -r my-tool      # Remove
+ai-cli config -t              # List tools
 
 # View config
-ai-cli config --list
-ai-cli config --list-tools
+ai-cli config -l
 ```
 
 ## Configuration

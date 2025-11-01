@@ -11,7 +11,11 @@ from .config import ConfigManager
 
 load_dotenv()
 
-app = typer.Typer(name="AI CLI", help="A CLI tool for managing multiple AI models")
+app = typer.Typer(
+    name="ai-cli",
+    help="Unified interface for AI models and CLI tools",
+    add_completion=False  # Disable shell completion options
+)
 
 
 def select_option(options: List[Tuple[str, str]], title: str = "Select an option:") -> Optional[Tuple[str, str]]:
@@ -109,7 +113,7 @@ def select_option(options: List[Tuple[str, str]], title: str = "Select an option
 
 @app.command()
 def tools():
-    """Interactive selection interface to choose and launch available AI CLI tools"""
+    """Launch interactive AI tool selector"""
     import subprocess
     
     manager = AIModelManager()
@@ -179,14 +183,14 @@ def tools():
 
 @app.command()
 def config(
-    set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set API key: provider=key"),
-    list_status: bool = typer.Option(False, "--list", "-l", help="List API key status"),
-    reset: bool = typer.Option(False, "--reset", help="Reset all configuration"),
-    add_tool: Optional[str] = typer.Option(None, "--add-tool", help="Add custom CLI tool"),
-    remove_tool: Optional[str] = typer.Option(None, "--remove-tool", help="Remove custom CLI tool"),
-    list_tools: bool = typer.Option(False, "--list-tools", help="List custom/excluded CLI tools")
+    set_key: Optional[str] = typer.Option(None, "--set", "-s", help="Set API key (provider=key)"),
+    add_tool: Optional[str] = typer.Option(None, "--add", "-a", help="Add custom tool"),
+    remove_tool: Optional[str] = typer.Option(None, "--remove", "-r", help="Remove custom tool"),
+    list_status: bool = typer.Option(False, "--list", "-l", help="Show configuration"),
+    list_tools: bool = typer.Option(False, "--tools", "-t", help="Show custom tools"),
+    reset: bool = typer.Option(False, "--reset", help="Reset all")
 ):
-    """Manage API keys and CLI tools"""
+    """Manage configuration"""
     config_manager = ConfigManager()
     
     if reset:
