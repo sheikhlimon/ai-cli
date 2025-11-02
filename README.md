@@ -2,6 +2,10 @@
 
 Unified interface for AI models and CLI tools. Just type `ai-cli`.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sheikhlimon/ai-cli/main/docs/screenshot.png" alt="AI CLI Screenshot" width="800" />
+</p>
+
 ## Quick Start
 
 ```bash
