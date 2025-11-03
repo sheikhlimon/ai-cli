@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2025-11-01
+## [0.1.1] - 2025-11-03
+
+### Added
+
+- New `--models`/`-m` option to show available AI models
+- Enhanced tools() function to display available resources before selection
+- Better error messages showing available models when none are found
+
+### Changed
+
+- Improved user experience with more informative output
+
+## [0.1.0] - 2025-11-01
 
 ### 🚨 BREAKING CHANGES
 
