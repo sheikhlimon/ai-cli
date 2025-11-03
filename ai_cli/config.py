@@ -82,13 +82,13 @@ class ConfigManager:
     def get_default_excluded_tools(self) -> List[str]:
         """Get default system tools always excluded"""
         return ['ai-cli', 'node', 'npm', 'npx', 'python', 'python3', 'pip', 
-                'bash', 'sh', 'corepack', 'yarn', 'pnpm']
+                'bash', 'sh', 'corepack', 'yarn', 'pnpm', 'ollama']
     
     def get_ai_tool_patterns(self) -> Dict:
         """Get configurable AI tool detection patterns"""
         config = self._load_config()
         defaults = {
-            "exact_matches": ['ollama', 'aider', 'droid', 'gemini', 'claude', 'qwen', 'anthropic',
+            "exact_matches": ['aider', 'droid', 'gemini', 'claude', 'qwen', 'anthropic',
                             'copilot', 'cody', 'cursor', 'fabric', 'ai', 'llm', 'gpt',
                             'chat', 'aichat', 'sgpt', 'chatgpt', 'amp'],
             "prefixes": ['ai-', 'chatgpt-', 'gpt-', 'llm-', 'gemini-', 'claude-', 'qwen-', 'openai-'],
