@@ -181,7 +181,7 @@ venv/bin/ai-cli tools
 - **Clean**: Consistent formatting, clear variable names
 - **Error messages**: Short, actionable, with emojis (❌ for errors, ✓ for success, 💬 for chat, 👋 for goodbye)
 - **Helper functions**: Extract logic into `_private_helpers()` for better organization
-- **Short flags**: Always provide single-letter aliases (-s, -a, -r, -l, -t)
+- **Short flags**: Always provide single-letter aliases (-s, -a, -r, -l, -t, -m)
 - **Default behavior**: Make common actions the default (e.g., `ai-cli` runs tool selector)
 
 ## Dependencies

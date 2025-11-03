@@ -24,6 +24,7 @@ ai-cli -s claude=key  # Set API key
 ai-cli -a my-tool   # Add custom tool
 ai-cli -l           # Show config
 ai-cli -t           # List custom tools
+ai-cli -m           # Show available models
 ai-cli --help       # See all options
 ```
 
@@ -33,7 +34,7 @@ ai-cli --help       # See all options
 - **One command** - `ai-cli` does everything
 - **Smart discovery** - Finds droid, gemini, claude, amp, ollama, etc.
 - **Cloud + Local** - Works with API-based models and Ollama
-- **Simple flags** - Short options for everything (-s, -a, -r, -l, -t)
+- **Simple flags** - Short options for everything (-s, -a, -r, -l, -t, -m)
 
 ## Setup API Keys
 
