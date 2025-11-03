@@ -101,3 +101,13 @@ class ConfigManager:
             return self._save_config(config)
         
         return False
+    
+    def get_known_node_tools(self) -> List[str]:
+        """Get list of known Node.js-based CLI tools that might disappear across versions"""
+        return self._load_config().get("known_node_tools", [])
+    
+    def set_known_node_tools(self, tools: List[str]) -> bool:
+        """Store known Node.js-based CLI tools for reference"""
+        config = self._load_config()
+        config["known_node_tools"] = list(set(tools))  # Remove duplicates
+        return self._save_config(config)

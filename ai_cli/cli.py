@@ -144,6 +144,21 @@ def tools():
             typer.echo("\nNo models currently available.")
             typer.echo("Configure at least one of: claude, gemini, qwen, or install Ollama")
         
+        # Check if we previously detected Node.js-based tools that are now missing
+        from .config import ConfigManager
+        config_manager = ConfigManager()
+        known_node_tools = config_manager.get_known_node_tools()
+        if known_node_tools:
+            available_tools = [tool for tool in known_node_tools if shutil.which(tool)]
+            missing_tools = [tool for tool in known_node_tools if not shutil.which(tool)]
+            
+            if missing_tools:
+                typer.echo(f"\n⚠️  Some previously detected tools are not available:")
+                for tool in missing_tools:
+                    typer.echo(f"   - {tool}")
+                typer.echo("\n  This may be due to Node.js version changes.")
+                typer.echo("  Consider reinstalling Node.js packages with: npm install -g <package-name>")
+        
         raise typer.Exit(code=1)
     
     # Display available models before selection
@@ -318,6 +333,24 @@ def config(
             typer.echo("  • ai-cli -s gemini=your_api_key") 
             typer.echo("  • ai-cli -s qwen=your_api_key")
             typer.echo("\nTo use local models: Install Ollama (https://ollama.ai)")
+        
+        # Check and report on missing Node.js-based tools
+        import shutil
+        config_manager = ConfigManager()
+        known_node_tools = config_manager.get_known_node_tools()
+        if known_node_tools:
+            available_tools = [tool for tool in known_node_tools if shutil.which(tool)]
+            missing_tools = [tool for tool in known_node_tools if not shutil.which(tool)]
+            
+            if missing_tools:
+                typer.echo(f"\n⚠️  Missing tools that were previously detected:")
+                for tool in missing_tools:
+                    typer.echo(f"   - {tool}")
+                typer.echo("\n  This may be due to Node.js version changes.")
+                typer.echo("  Consider reinstalling with: npm install -g <package-name>")
+        
+        if known_node_tools and not missing_tools:
+            typer.echo(f"\n  Previously detected tools: {', '.join(known_node_tools)}")
         return
     
     if list_status or not (set_key or add_tool):

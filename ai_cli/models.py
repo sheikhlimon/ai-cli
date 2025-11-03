@@ -147,6 +147,13 @@ class AIModelManager:
                 available_clis.append(tool)
                 seen.add(tool)
         
+        # Track Node.js-based tools that are currently available
+        node_tool_indicators = ['node_modules', 'package.json', 'npm', 'yarn', 'pnpm']
+        current_node_tools = [tool for tool in available_clis 
+                             if any(indicator in tool.lower() for indicator in ['claude', 'gemini', 'chatgpt', 'gpt', 'ai', 'ollama'] + node_tool_indicators)
+                             and shutil.which(tool)]  # Confirm they're executable
+        config_manager.set_known_node_tools(current_node_tools)
+        
         return sorted(available_clis)
     
     def get_available_models(self) -> list:
