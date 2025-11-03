@@ -4,12 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-version Node.js support** - Finds tools across all Node versions (nvm, fnm, volta)
+- **Absolute path execution** - Tools work even after switching Node.js versions
+
 ### Changed
 
 - **Configurable tool detection patterns** - Moved hardcoded patterns to config.json for user customization
-- **PATH verification** - Verifies all tools with `shutil.which()` to ensure they're currently executable
-- **Cleaner code organization** - Extracted pattern management to ConfigManager, reduced code duplication
-- **Improved documentation** - Updated AGENT.md with concise patterns and customization guide
+- **Scan Node version directories** - Automatically discovers global packages from all installed Node versions
+- **Cleaner code organization** - Extracted pattern management to ConfigManager
+- **Improved documentation** - Updated AGENT.md with multi-version support details
 
 ### Removed
 
@@ -17,7 +22,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Stale tools no longer appear after environment changes (Node.js version switches, PATH modifications)
+- Tools from old Node.js versions now available after switching (e.g., `fnm use 25` still shows v24 tools)
 
 ## [0.1.1] - 2025-11-03
 

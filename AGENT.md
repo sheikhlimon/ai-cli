@@ -63,11 +63,11 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 - Default system tools: `node`, `npm`, `npx`, `python`, `pip`, `bash`, etc.
 - User-configurable exclusions: Via `excluded_cli_tools` in config
 
-**PATH Verification:**
-- Uses `shutil.which()` to verify tools are actually executable
-- Prevents showing stale tools after environment changes
-- Works correctly with Node.js version managers (nvm, fnm)
-- Tools refresh automatically on each run
+**Multi-Version Node.js Support:**
+- Scans all Node.js versions managed by nvm, fnm, and volta
+- Tools from ANY Node version are available, not just current
+- Stores absolute paths so tools work after version switches
+- Automatically discovers global packages across all versions
 
 
 

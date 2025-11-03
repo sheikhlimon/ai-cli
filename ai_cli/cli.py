@@ -193,7 +193,7 @@ def tools():
     if resource_type == "model":
         _run_chat_session(manager, resource_name)
     elif resource_type == "tool":
-        _run_cli_tool(resource_name)
+        _run_cli_tool(manager, resource_name)
 
 def _run_chat_session(manager: AIModelManager, model_name: str):
     """Run interactive chat session with a model"""
@@ -217,14 +217,17 @@ def _run_chat_session(manager: AIModelManager, model_name: str):
             typer.echo(f"❌ Error: {str(e)}")
             break
 
-def _run_cli_tool(tool_name: str):
-    """Launch external CLI tool"""
+def _run_cli_tool(manager: AIModelManager, tool_name: str):
+    """Launch external CLI tool using absolute path"""
     import subprocess
     
+    # Get absolute path from manager
+    tool_path = manager.tool_paths.get(tool_name, tool_name)
+    
     try:
-        subprocess.run([tool_name])
+        subprocess.run([tool_path])
     except FileNotFoundError:
-        typer.echo(f"❌ '{tool_name}' not found in PATH")
+        typer.echo(f"❌ '{tool_name}' not found")
         typer.echo(f"Try: ai-cli config -a {tool_name}")
     except KeyboardInterrupt:
         typer.echo("\n")

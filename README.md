@@ -35,6 +35,7 @@ ai-cli --help       # See all options
 - **Cloud + Local** - Works with API-based models and Ollama
 - **Simple flags** - Short options for everything (-s, -a, -r, -l, -t)
 - **Configurable patterns** - Customize tool detection in config.json
+- **Multi-version support** - Finds Node.js tools across all versions (nvm, fnm, volta)
 
 ## Setup API Keys
 

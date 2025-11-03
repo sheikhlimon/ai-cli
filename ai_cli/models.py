@@ -113,7 +113,7 @@ class AIModelManager:
         from .config import ConfigManager
         
         config_manager = ConfigManager()
-        candidates = []
+        candidates = {}  # Changed to dict to store {name: full_path}
         seen = set()
         
         excluded = set(config_manager.get_default_excluded_tools())
@@ -125,9 +125,20 @@ class AIModelManager:
         suffixes = patterns.get("suffixes", [])
         suffix_exclusions = patterns.get("suffix_exclusions", [])
         
+        # Get directories to scan: Node.js version managers first, then PATH
+        node_dirs = self._get_node_version_dirs()
         path_dirs = os.environ.get('PATH', '').split(os.pathsep)
         
-        for path_dir in path_dirs:
+        # Combine and deduplicate
+        all_dirs = node_dirs + path_dirs
+        seen_dirs = set()
+        scan_dirs = []
+        for d in all_dirs:
+            if d not in seen_dirs:
+                seen_dirs.add(d)
+                scan_dirs.append(d)
+        
+        for path_dir in scan_dirs:
             try:
                 path_obj = Path(path_dir)
                 if not path_obj.exists() or not path_obj.is_dir():
@@ -143,15 +154,19 @@ class AIModelManager:
                     name = item.name
                     name_lower = name.lower()
                     
-                    if name_lower in exact_matches:
-                        candidates.append(name)
-                        seen.add(name)
-                    elif any(name_lower.startswith(prefix) for prefix in prefixes):
-                        candidates.append(name)
-                        seen.add(name)
-                    elif (any(name_lower.endswith(suffix) for suffix in suffixes) and 
-                          not any(exclusion in name_lower for exclusion in suffix_exclusions)):
-                        candidates.append(name)
+                    # Skip if already found (prefer earlier directories)
+                    if name in seen:
+                        continue
+                    
+                    matches_pattern = (
+                        name_lower in exact_matches or
+                        any(name_lower.startswith(prefix) for prefix in prefixes) or
+                        (any(name_lower.endswith(suffix) for suffix in suffixes) and 
+                         not any(exclusion in name_lower for exclusion in suffix_exclusions))
+                    )
+                    
+                    if matches_pattern:
+                        candidates[name] = str(item.absolute())
                         seen.add(name)
                         
             except (PermissionError, OSError):
@@ -160,15 +175,53 @@ class AIModelManager:
         custom_tools = config_manager.get_custom_cli_tools()
         for tool in custom_tools:
             if tool not in excluded and tool not in seen:
-                candidates.append(tool)
-                seen.add(tool)
+                tool_path = shutil.which(tool)
+                if tool_path:
+                    candidates[tool] = tool_path
+                    seen.add(tool)
         
-        # Verify tools are in current PATH (handles Node.js version switches)
-        available_tools = [tool for tool in candidates if shutil.which(tool)]
+        # Store tool paths for later use
+        self.tool_paths = candidates
         
+        # Return sorted list of tool names
+        available_tools = sorted(candidates.keys())
         self._track_node_tools(available_tools, config_manager)
         
-        return sorted(available_tools)
+        return available_tools
+    
+    def _get_node_version_dirs(self) -> list:
+        """Get bin directories from all Node.js version managers"""
+        from pathlib import Path
+        dirs = []
+        
+        # fnm
+        fnm_base = Path.home() / ".local/share/fnm/node-versions"
+        if fnm_base.exists():
+            for version_dir in fnm_base.iterdir():
+                if version_dir.is_dir():
+                    bin_dir = version_dir / "installation/bin"
+                    if bin_dir.exists():
+                        dirs.append(str(bin_dir))
+        
+        # nvm
+        nvm_base = Path.home() / ".nvm/versions/node"
+        if nvm_base.exists():
+            for version_dir in nvm_base.iterdir():
+                if version_dir.is_dir():
+                    bin_dir = version_dir / "bin"
+                    if bin_dir.exists():
+                        dirs.append(str(bin_dir))
+        
+        # volta
+        volta_base = Path.home() / ".volta/tools/image/node"
+        if volta_base.exists():
+            for version_dir in volta_base.iterdir():
+                if version_dir.is_dir():
+                    bin_dir = version_dir / "bin"
+                    if bin_dir.exists():
+                        dirs.append(str(bin_dir))
+        
+        return dirs
     
     def _track_node_tools(self, tools: list, config_manager) -> None:
         """Track Node.js-based tools that may change across version switches"""
