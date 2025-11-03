@@ -135,7 +135,31 @@ def tools():
         typer.echo("  • Cloud models: ai-cli config -s provider=key")
         typer.echo("  • Local models: Install Ollama (https://ollama.ai)")
         typer.echo("  • CLI tools: Will be auto-detected from PATH")
+        
+        # Show which providers are configured vs not configured
+        status = manager.get_available_models()
+        if status:
+            typer.echo(f"\nAvailable models: {', '.join(status)}")
+        else:
+            typer.echo("\nNo models currently available.")
+            typer.echo("Configure at least one of: claude, gemini, qwen, or install Ollama")
+        
         raise typer.Exit(code=1)
+    
+    # Display available models before selection
+    cloud_models = [model for model in resources["models"] if not model.startswith("ollama:")]
+    ollama_models = [model[7:] for model in resources["models"] if model.startswith("ollama:")]
+    cli_tools = resources["cli_tools"]
+    
+    if cloud_models or ollama_models or cli_tools:
+        typer.echo("Available resources:")
+        if cloud_models:
+            typer.echo(f"  Cloud models: {', '.join(cloud_models)}")
+        if ollama_models:
+            typer.echo(f"  Ollama models: {', '.join(ollama_models)}")
+        if cli_tools:
+            typer.echo(f"  CLI tools: {', '.join(cli_tools)}")
+        typer.echo()
     
     # Get user selection
     try:
@@ -199,6 +223,7 @@ def config(
     remove_tool: Optional[str] = typer.Option(None, "--remove", "-r", help="Remove custom tool"),
     list_status: bool = typer.Option(False, "--list", "-l", help="Show configuration"),
     list_tools: bool = typer.Option(False, "--tools", "-t", help="Show custom tools"),
+    show_models: bool = typer.Option(None, "--models", "-m", help="Show available models"),
     reset: bool = typer.Option(False, "--reset", help="Reset all")
 ):
     """Configuration options"""
@@ -270,6 +295,31 @@ def config(
             typer.echo("  (none)")
         return
     
+    # Show available models if requested
+    if show_models:
+        manager = AIModelManager()
+        available_models = manager.get_available_models()
+        
+        typer.echo("Available AI Models:")
+        if available_models:
+            cloud_models = [model for model in available_models if not model.startswith("ollama:")]
+            ollama_models = [model[7:] for model in available_models if model.startswith("ollama:")]
+            
+            if cloud_models:
+                typer.echo(f"  Cloud models: {', '.join(cloud_models)}")
+            if ollama_models:
+                typer.echo(f"  Ollama models: {', '.join(ollama_models)}")
+            if not cloud_models and not ollama_models:
+                typer.echo("  (none)")
+        else:
+            typer.echo("  No models available")
+            typer.echo("\nTo configure cloud models:")
+            typer.echo("  • ai-cli -s claude=your_api_key")
+            typer.echo("  • ai-cli -s gemini=your_api_key") 
+            typer.echo("  • ai-cli -s qwen=your_api_key")
+            typer.echo("\nTo use local models: Install Ollama (https://ollama.ai)")
+        return
+    
     if list_status or not (set_key or add_tool):
         status = config_manager.get_providers_status()
         typer.echo("Configuration:")
@@ -288,6 +338,7 @@ def main(
     remove_tool: Optional[str] = typer.Option(None, "--remove", "-r", help="Remove custom tool"),
     list_status: bool = typer.Option(False, "--list", "-l", help="Show configuration"),
     list_tools: bool = typer.Option(False, "--tools", "-t", help="Show custom tools"),
+    show_models: bool = typer.Option(None, "--models", "-m", help="Show available models"),
     reset: bool = typer.Option(False, "--reset", help="Reset all")
 ):
     """
@@ -296,8 +347,8 @@ def main(
     Run without options to launch interactive tool selector.
     """
     # Handle config options if provided
-    if any([set_key, add_tool, remove_tool, list_status, list_tools, reset]):
-        config(ctx, set_key, add_tool, remove_tool, list_status, list_tools, reset)
+    if any([set_key, add_tool, remove_tool, list_status, list_tools, show_models, reset]):
+        config(ctx, set_key, add_tool, remove_tool, list_status, list_tools, show_models, reset)
     elif ctx.invoked_subcommand is None:
         # Launch tool selector by default
         tools()
