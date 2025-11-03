@@ -44,21 +44,32 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 
 ### Dynamic CLI Tool Discovery
 
-**No hardcoded tool lists - scans PATH automatically**
+**No hardcoded tool lists - scans PATH automatically with configurable patterns**
 
-- Scans all directories in `PATH` environment variable
-- Pattern matching: exact names (ollama, droid, gemini, claude, amp, qwen)
-- Prefix matching: `ai-`, `gpt-`, `chatgpt-`, `llm-`, `gemini-`, `claude-`
-- Suffix matching: `-cli`, `-ai`, `-gpt`, `-llm`
-- Exclusion list to filter system tools (node, npm, python, etc.)
+**Detection Strategy:**
+1. Scans all directories in `PATH` environment variable
+2. Matches against configurable patterns (stored in config.json)
+3. Verifies tools are in current PATH (handles environment changes)
+4. Adds custom user-configured tools
+5. Tracks volatile Node.js-based tools
 
-### New --models Option
+**Pattern Matching (configurable via ai_tool_patterns in config):**
+- Exact matches: `ollama`, `aider`, `droid`, `gemini`, `claude`, `qwen`, `anthropic`, etc.
+- Prefix matching: `ai-*`, `gpt-*`, `chatgpt-*`, `llm-*`, `gemini-*`, `claude-*`, etc.
+- Suffix matching: `*-ai`, `*-gpt`, `*-llm`
+- Suffix exclusions: Filters out false positives like `android-*`, `*-deploy`, etc.
 
-**Added in recent update**
+**Exclusion System:**
+- Default system tools: `node`, `npm`, `npx`, `python`, `pip`, `bash`, etc.
+- User-configurable exclusions: Via `excluded_cli_tools` in config
 
-- New `--models`/`-m` option to show available AI models
-- Displays both cloud models and Ollama models
-- Provides better visibility into what's available before selection
+**PATH Verification:**
+- Uses `shutil.which()` to verify tools are actually executable
+- Prevents showing stale tools after environment changes
+- Works correctly with Node.js version managers (nvm, fnm)
+- Tools refresh automatically on each run
+
+
 
 ### Custom TUI Implementation
 
@@ -70,6 +81,17 @@ AI CLI is a unified interface for AI models and CLI tools with interactive selec
 - Proper cleanup in finally block to prevent terminal corruption
 
 ## Key Functions Reference
+
+### _check_cli_availability()
+
+```python
+def _check_cli_availability(self) -> list
+```
+
+- Scans PATH for AI tools using configurable patterns
+- Verifies tools with `shutil.which()` (handles Node.js version switches)
+- Returns sorted list of available tool names
+- Handles permission errors, broken symlinks, duplicates gracefully
 
 ### select_option()
 
@@ -154,8 +176,27 @@ def _save_config(config: Dict) -> bool  # Returns success status
 2. Use typer.Option for flags/arguments
 3. Keep error messages concise
 
+### Customizing Tool Detection
+
+Edit `~/.ai-cli/config.json` to customize patterns:
+
+```json
+{
+  "ai_tool_patterns": {
+    "exact_matches": ["ollama", "custom-tool"],
+    "prefixes": ["ai-", "gpt-"],
+    "suffixes": ["-ai", "-llm"],
+    "suffix_exclusions": ["android", "deploy"]
+  },
+  "excluded_cli_tools": ["unwanted-tool"],
+  "custom_cli_tools": ["my-ai"]
+}
+```
+
 ### Common Pitfalls
 
 - **Text wrapping/misalignment in TUI**: Always use `\r\n` (carriage return + newline) in raw mode
 - **Terminal left in broken state**: Always use try/finally block to restore settings and show cursor
 - **ANSI codes visible as text**: Check `sys.stdin.isatty()` before entering TUI mode
+- **Stale tool detection**: Always verify tools with `shutil.which()` after PATH scanning
+- **Hardcoding patterns**: Use configurable patterns from config

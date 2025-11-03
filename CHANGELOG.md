@@ -2,13 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **Configurable tool detection patterns** - Moved hardcoded patterns to config.json for user customization
+- **PATH verification** - Verifies all tools with `shutil.which()` to ensure they're currently executable
+- **Cleaner code organization** - Extracted pattern management to ConfigManager, reduced code duplication
+- **Improved documentation** - Updated AGENT.md with concise patterns and customization guide
+
+### Removed
+
+- **--models/-m flag** - Redundant with default behavior (run `ai-cli` to see available resources)
+
+### Fixed
+
+- Stale tools no longer appear after environment changes (Node.js version switches, PATH modifications)
+
 ## [0.1.1] - 2025-11-03
 
 ### Added
 
-- New `--models`/`-m` option to show available AI models
 - Enhanced tools() function to display available resources before selection
-- Better error messages showing available models when none are found
+- Better error messages showing available resources when none are found
 
 ### Changed
 

@@ -79,6 +79,24 @@ class ConfigManager:
         """Get list of excluded CLI tools from config"""
         return self._load_config().get("excluded_cli_tools", [])
     
+    def get_default_excluded_tools(self) -> List[str]:
+        """Get default system tools always excluded"""
+        return ['ai-cli', 'node', 'npm', 'npx', 'python', 'python3', 'pip', 
+                'bash', 'sh', 'corepack', 'yarn', 'pnpm']
+    
+    def get_ai_tool_patterns(self) -> Dict:
+        """Get configurable AI tool detection patterns"""
+        config = self._load_config()
+        defaults = {
+            "exact_matches": ['ollama', 'aider', 'droid', 'gemini', 'claude', 'qwen', 'anthropic',
+                            'copilot', 'cody', 'cursor', 'fabric', 'ai', 'llm', 'gpt',
+                            'chat', 'aichat', 'sgpt', 'chatgpt', 'amp'],
+            "prefixes": ['ai-', 'chatgpt-', 'gpt-', 'llm-', 'gemini-', 'claude-', 'qwen-', 'openai-'],
+            "suffixes": ['-ai', '-gpt', '-llm'],
+            "suffix_exclusions": ['android', 'deploy', 'hypr', 'gnu', 'omarchy']
+        }
+        return config.get("ai_tool_patterns", defaults)
+    
     def add_custom_cli_tool(self, tool: str) -> bool:
         """Add a custom CLI tool to config"""
         config = self._load_config()

@@ -88,20 +88,43 @@ class AIModelManager:
             return []
 
     def _check_cli_availability(self) -> list:
-        """Auto-detect AI CLI tools on the system"""
+        """
+        Auto-detect AI CLI tools on the system by scanning PATH directories.
+        
+        Detection strategy:
+        1. Scans all PATH directories for executable files
+        2. Matches tools against configurable patterns (exact names, prefixes, suffixes)
+        3. Verifies tools are actually in current PATH (handles Node.js version switches)
+        4. Adds custom tools from config
+        5. Tracks Node.js-based tools for environment change detection
+        
+        Returns:
+            Sorted list of available AI CLI tool names
+            
+        Edge cases handled:
+        - Node.js version changes: Uses shutil.which() to verify PATH accessibility
+        - Permission errors: Silently skips inaccessible directories
+        - Symlinks and broken links: Checked via os.access() and shutil.which()
+        - Duplicate tool names: Tracked via 'seen' set
+        - Custom vs auto-detected conflicts: Custom tools added after auto-detection
+        """
         import shutil
         from pathlib import Path
         from .config import ConfigManager
         
         config_manager = ConfigManager()
-        available_clis = []
+        candidates = []
         seen = set()
         
-        # Exclude common system tools
-        excluded = set(config_manager.get_excluded_cli_tools())
-        excluded.update(['ai-cli', 'node', 'npm', 'npx', 'python', 'python3', 'pip', 'bash', 'sh', 'corepack', 'yarn', 'pnpm'])
+        excluded = set(config_manager.get_default_excluded_tools())
+        excluded.update(config_manager.get_excluded_cli_tools())
         
-        # Scan all PATH directories
+        patterns = config_manager.get_ai_tool_patterns()
+        exact_matches = set(patterns.get("exact_matches", []))
+        prefixes = patterns.get("prefixes", [])
+        suffixes = patterns.get("suffixes", [])
+        suffix_exclusions = patterns.get("suffix_exclusions", [])
+        
         path_dirs = os.environ.get('PATH', '').split(os.pathsep)
         
         for path_dir in path_dirs:
@@ -111,50 +134,54 @@ class AIModelManager:
                     continue
                 
                 for item in path_obj.iterdir():
-                    if not item.is_file() or item.name in excluded or item.name in seen:
+                    if not item.is_file() or item.name in seen or item.name in excluded:
                         continue
                     
-                    # Check if executable
                     if not os.access(str(item), os.X_OK):
                         continue
                     
                     name = item.name
                     name_lower = name.lower()
                     
-                    # Match AI tool patterns
-                    # 1. Exact matches for specific AI tools
-                    if name_lower in ['ollama', 'aider', 'droid', 'gemini', 'claude', 'qwen', 'anthropic', 
-                                      'copilot', 'cody', 'cursor', 'fabric', 'ai', 'llm', 'gpt', 
-                                      'chat', 'aichat', 'sgpt', 'chatgpt', 'amp']:
-                        available_clis.append(name)
+                    if name_lower in exact_matches:
+                        candidates.append(name)
                         seen.add(name)
-                    # 2. Has AI-related prefixes
-                    elif any(name_lower.startswith(x) for x in ['ai-', 'chatgpt-', 'gpt-', 'llm-', 'gemini-', 'claude-', 'qwen-', 'openai-']):
-                        available_clis.append(name)
+                    elif any(name_lower.startswith(prefix) for prefix in prefixes):
+                        candidates.append(name)
                         seen.add(name)
-                    # 3. Has AI-related suffixes (but not system tools)
-                    elif any(name_lower.endswith(x) for x in ['-ai', '-gpt', '-llm']) and not any(y in name_lower for y in ['android', 'deploy', 'hypr', 'gnu', 'omarchy']):
-                        available_clis.append(name)
+                    elif (any(name_lower.endswith(suffix) for suffix in suffixes) and 
+                          not any(exclusion in name_lower for exclusion in suffix_exclusions)):
+                        candidates.append(name)
                         seen.add(name)
                         
             except (PermissionError, OSError):
                 continue
         
-        # Add custom CLI tools from config
         custom_tools = config_manager.get_custom_cli_tools()
         for tool in custom_tools:
-            if tool not in excluded and tool not in seen and shutil.which(tool):
-                available_clis.append(tool)
+            if tool not in excluded and tool not in seen:
+                candidates.append(tool)
                 seen.add(tool)
         
-        # Track Node.js-based tools that are currently available
-        node_tool_indicators = ['node_modules', 'package.json', 'npm', 'yarn', 'pnpm']
-        current_node_tools = [tool for tool in available_clis 
-                             if any(indicator in tool.lower() for indicator in ['claude', 'gemini', 'chatgpt', 'gpt', 'ai', 'ollama'] + node_tool_indicators)
-                             and shutil.which(tool)]  # Confirm they're executable
-        config_manager.set_known_node_tools(current_node_tools)
+        # Verify tools are in current PATH (handles Node.js version switches)
+        available_tools = [tool for tool in candidates if shutil.which(tool)]
         
-        return sorted(available_clis)
+        self._track_node_tools(available_tools, config_manager)
+        
+        return sorted(available_tools)
+    
+    def _track_node_tools(self, tools: list, config_manager) -> None:
+        """Track Node.js-based tools that may change across version switches"""
+        node_indicators = ['node_modules', 'npm', 'yarn', 'pnpm']
+        npm_ai_tools = ['claude', 'gemini', 'chatgpt', 'gpt', 'ai', 'llm']
+        
+        node_tools = [
+            tool for tool in tools
+            if any(indicator in tool.lower() for indicator in node_indicators + npm_ai_tools)
+        ]
+        
+        if node_tools:
+            config_manager.set_known_node_tools(node_tools)
     
     def get_available_models(self) -> list:
         """Get list of available models based on configured API keys and local models"""
